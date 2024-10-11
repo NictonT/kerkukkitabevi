@@ -2,60 +2,213 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Kerkuk Kitabevi</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kerkuk Kitab Evi</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    >
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap"
+      rel="stylesheet"
+    >
+    <!-- Font Awesome for Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    >
 </head>
 <body>
-    <header>
-        <div class="header-content">
-            <h1>Kerkuk Kitab Evi</h1>
-            <p>Your trusted bookstore in Kerkuk, offering a variety of titles to feed your knowledge and imagination.</p>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-4" href="index.html">
+                <img src="photos/logo/logo.png" alt="Kerkuk Kitabevi Logo" class="logo-img me-2">
+                Kerkuk Kitabevi
+            </a>
+            <button
+              class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#navbarNav"
+              aria-controls="navbarNav"
+              aria-expanded="false"
+              aria-label="Toggle navigation"
+            >
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div
+              class="collapse navbar-collapse justify-content-end"
+              id="navbarNav"
+            >
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item mx-2">
+                        <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link" href="books.html">Books</a>
+                    </li>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link" href="contact.html">Contact</a>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </header>
+    </nav>
 
-    <section id="about-us">
-        <h2>About Us</h2>
-        <p>Kerkuk Kitab Evi is dedicated to providing a wide range of books that cater to all interests and ages. We aim to promote reading culture by making books accessible and affordable for everyone in our community.</p>
+    <!-- Hero Section -->
+    <section
+      class="hero-section d-flex align-items-center text-center text-white"
+      style="background-image: url('hero-image.jpg');"
+    >
+        <div class="overlay"></div>
+        <div class="container position-relative">
+            <h1 class="display-3 fw-bold">Discover Your Next Adventure</h1>
+            <p class="lead mb-4">Explore a world of books handpicked just for you.</p>
+            <a href="books.html" class="btn btn-lg btn-outline-light">Browse Collection</a>
+        </div>
     </section>
 
-    <section id="our-books">
-        <h2>Our Books</h2>
-        <div class="books-container">
-            <div class="book">
-                <img src="book1.jpg" alt="Book Title 1">
-                <h3>Book Title 1</h3>
-                <p>An exciting book that delves into the mysteries of history.</p>
-            </div>
-            <div class="book">
-                <img src="book2.jpg" alt="Book Title 2">
-                <h3>Book Title 2</h3>
-                <p>A gripping novel about love and resilience.</p>
-            </div>
-            <div class="book">
-                <img src="book3.jpg" alt="Book Title 3">
-                <h3>Book Title 3</h3>
-                <p>A detailed exploration of science and technology advancements.</p>
+    <!-- Featured Books Section -->
+    <section class="featured-books py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">You Must Read</h2>
+            <div class="row g-4">
+                <!-- Book Item -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="book1.jpg" class="card-img-top" alt="Book Title 1">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">Book Title 1</h5>
+                            <p class="card-text text-muted">by Author Name</p>
+                            <a href="#" class="btn btn-outline-primary mt-auto">View Details</a>
+                        </div>
+                    </div>
+                </div>
+                <!-- Repeat book items as needed -->
             </div>
         </div>
     </section>
 
-    <section id="contact">
-        <h2>Contact Us</h2>
-        <p>If you have any questions, feel free to contact us using the details below:</p>
-        <ul>
-            <li><i class="fas fa-envelope"></i> Email: <a href="mailto:contact@kerkukkitapevi.net">contact@kerkukkitapevi.net</a></li>
-            <li><i class="fas fa-phone"></i> Business Number: +123 456 7890</li>
-            <li><i class="fab fa-telegram"></i> Telegram: <a href="https://t.me/kerkukkitapevi" target="_blank">@kerkukkitapevi</a></li>
-            <li><i class="fab fa-instagram"></i> Instagram: <a href="https://www.instagram.com/kerkukkitapevi" target="_blank">@kerkukkitapevi</a></li>
-        </ul>
+    <!-- Testimonials Section -->
+    <section class="testimonials bg-light py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Why?</h2>
+            <div class="row g-4">
+                <!-- Testimonial Item -->
+                <div class="col-md-4">
+                    <div class="card h-100 border-0">
+                        <div class="card-body">
+                            <i class="fas fa-quote-left fa-2x text-primary mb-3"></i>
+                            <p class="card-text">"Created by the community for the community"</p>
+                            <h6 class="card-subtitle text-muted mt-3">— Mohammed, Owner</h6>
+                        </div>
+                    </div>
+                </div>
+                <!-- Repeat testimonials as needed -->
+            </div>
+        </div>
+    </section>
+    <!-- Join the Club Section -->
+    <section class="join-club py-5 bg-primary text-white text-center">
+        <div class="container">
+            <h2 class="mb-4">Join the Kerkuk Kitabevi Club</h2>
+            <p class="mb-4">Become a member of our club and enjoy exclusive perks, events, and book recommendations.</p>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeTjKs89CtuqO3vfL3rlA0t6sYSnxyMpcPz_vNsIEIOTKKeOA/viewform" target="_blank" class="btn btn-outline-light btn-lg">Join Now</a>
+        </div>
     </section>
 
-    <footer>
-        <p>&copy; 2024 Kerkuk Kitab Evi. All rights reserved.</p>
+    <!-- Contact Information -->
+    <section class="contact-info py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Get in Touch</h2>
+            <div class="row text-center">
+                <div class="col-md-4 mb-4">
+                    <i class="fas fa-envelope fa-3x text-primary mb-3"></i>
+                    <h5>Email Us</h5>
+                    <p><a href="mailto:contact@kerkukkitabevi.net">contact@kerkukkitabevi.net</a></p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <i class="fas fa-phone-alt fa-3x text-primary mb-3"></i>
+                    <h5>Call Us</h5>
+                    <p><a href="tel:+9647750179472">+964 775 017 9472</a></p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <i class="fas fa-map-marker-alt fa-3x text-primary mb-3"></i>
+                    <h5>Visit Us</h5>
+                    <p>123 Book Street, Literature City</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white pt-5">
+        <div class="container">
+            <div class="row mb-4">
+                <!-- Footer Column 1 -->
+                <div class="col-md-4">
+                    <h5>About Us</h5>
+                    <p>
+                      At Kerkuk Kitabevi, we connect readers with stories that inspire and entertain.
+                      Join our community and dive into the world of books.
+                    </p>
+                </div>
+                <!-- Footer Column 2 -->
+                <div class="col-md-2">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="index.html" class="text-white-50">Home</a></li>
+                        <li><a href="books.html" class="text-white-50">Books</a></li>
+                        <li><a href="contact.html" class="text-white-50">Contact</a></li>
+                    </ul>
+                </div>
+                <!-- Footer Column 3 -->
+                <div class="col-md-3">
+                    <h5>Contact Info</h5>
+                    <p>
+                      <i class="fas fa-envelope me-2"></i>
+                      <a href="mailto:contact@kerkukkitabevi.net" class="text-white-50">contact@kerkukkitabevi.net</a>
+                    </p>
+                    <p>
+                      <i class="fas fa-phone me-2"></i>
+                      <a href="tel:+9647750179472" class="text-white-50">+964 775 017 9472</a>
+                    </p>
+                    <p>
+                      <i class="fas fa-map-marker-alt me-2"></i>
+                      123 Book Street, Literature City
+                    </p>
+                </div>
+                <!-- Footer Column 4 -->
+                <div class="col-md-3">
+                    <h5>Follow Us</h5>
+                    <div class="d-flex">
+                        <a href="https://www.instagram.com/kerkuk_kitabevi82?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="text-white-50 me-3">
+                            <i class="fab fa-instagram fa-2x"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-top border-secondary pt-3 text-center">
+                <p class="mb-0">&copy; 2023 Kerkuk Kitabevi. All rights reserved.</p>
+                <p>
+                  <a href="index.html" class="text-white-50">Privacy Policy</a>
+                  |
+                  <a href="index.html" class="text-white-50">Terms of Service</a>
+                </p>
+            </div>
+        </div>
     </footer>
 
-    <script src="scripts.js"></script>
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
 </body>
 </html>
