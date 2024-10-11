@@ -1,0 +1,257 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap');
+
+/* Root Variables */
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --font-heading: 'Merriweather', serif;
+    --font-body: 'Open Sans', sans-serif;
+}
+
+/* General Styles */
+body {
+    font-family: var(--font-body);
+    color: #212529;
+    background-color: #f8f9fa;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.logo-img {
+    max-height: 40px;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+}
+
+.nav-link {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+}
+
+/* Hero Section */
+.hero-section {
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    min-height: 600px;
+}
+
+.hero-section .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.hero-section .container {
+    position: relative;
+    z-index: 1;
+}
+
+.hero-section h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.hero-section p {
+    font-size: 1.25rem;
+}
+
+.hero-section .btn {
+    padding: 0.75rem 1.5rem;
+}
+
+/* Featured Books */
+.featured-books h2 {
+    font-size: 2.5rem;
+    margin-bottom: 3rem;
+}
+
+.featured-books .card {
+    border: none;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.featured-books .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.featured-books .card-img-top {
+    height: 300px;
+    object-fit: cover;
+}
+
+.featured-books .card-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.featured-books .card-text {
+    font-size: 1rem;
+    color: var(--secondary-color);
+}
+
+.featured-books .price {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 1rem;
+}
+
+/* About Us */
+.about-us h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.about-us p {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.about-us .btn {
+    padding: 0.5rem 1.25rem;
+}
+
+/* Contact Info */
+.contact-info h2 {
+    font-size: 2.5rem;
+    margin-bottom: 3rem;
+}
+
+.contact-info .fa-3x {
+    color: var(--primary-color);
+}
+
+.contact-info h5 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.contact-info p {
+    font-size: 1rem;
+}
+
+.contact-info a {
+    color: #212529;
+    text-decoration: none;
+}
+
+.contact-info a:hover {
+    text-decoration: underline;
+}
+
+/* Instagram Feed */
+.instagram-feed h2 {
+    font-size: 2.5rem;
+    margin-bottom: 3rem;
+}
+
+.instagram-feed img {
+    border-radius: 0.5rem;
+    transition: transform 0.3s;
+}
+
+.instagram-feed img:hover {
+    transform: scale(1.05);
+}
+
+/* Footer */
+footer {
+    background-color: #212529;
+    color: #adb5bd;
+    padding-top: 3rem;
+    padding-bottom: 2rem;
+}
+
+footer h5 {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+footer p, footer a {
+    font-size: 0.875rem;
+    color: #adb5bd;
+}
+
+footer a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+footer .border-secondary {
+    border-color: #495057 !important;
+}
+
+footer .fa-2x {
+    color: #adb5bd;
+    transition: color 0.3s;
+}
+
+footer .fa-2x:hover {
+    color: var(--primary-color);
+}
+
+/* Responsive Styles */
+@media (max-width: 991.98px) {
+    .navbar-nav .nav-item {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .hero-section h1 {
+        font-size: 2.5rem;
+    }
+
+    .hero-section p {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .featured-books .card-img-top {
+        height: 200px;
+    }
+
+    .contact-info .col-md-4 {
+        margin-bottom: 2rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .hero-section {
+        min-height: 400px;
+    }
+
+    .about-us .col-md-6 {
+        margin-bottom: 2rem;
+    }
+}
