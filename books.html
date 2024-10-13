@@ -4,20 +4,14 @@
     <meta charset="UTF-8">
     <title>Kerkuk Kitabevi - Books</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Include PapaParse for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
 
-    <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold fs-4" href="index.html">
@@ -43,13 +37,12 @@
         </div>
     </nav>
 
-    <!-- Books List Section -->
     <section class="books-section py-5">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="text-center mb-0">Books</h2>
                 <button class="btn btn-light border dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">Filter</button>
-                <ul class="dropdown-menu show" aria-labelledby="filterDropdown" style="position: absolute; inset: 0px 0px auto auto; margin: 0px; transform: translate3d(-111.2px, 230.4px, 0px);" data-popper-placement="bottom-end">
+                <ul class="dropdown-menu" aria-labelledby="filterDropdown">
                     <li><a class="dropdown-item" href="#">Category</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><div class="px-4 py-2">
@@ -75,49 +68,13 @@
             <div class="mb-4">
                 <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN..." onkeyup="applyFilters()">
             </div>
-            <div class="row g-4" id="booksContainer">
-                <!-- Book Items will be displayed here dynamically -->
-            </div>
+            <div class="row g-4" id="booksContainer"></div>
             <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center" id="pagination">
-                    <!-- Pagination Items will be displayed here dynamically -->
-                </ul>
+                <ul class="pagination justify-content-center" id="pagination"></ul>
             </nav>
         </div>
     </section>
 
-    <!-- Book Details Modal -->
-    <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-labelledby="bookDetailsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="bookDetailsModalLabel">Book Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <img id="bookPhoto" src="" alt="Book Image" class="img-fluid">
-                        </div>
-                        <div class="col-md-8">
-                            <h5 id="bookTitle"></h5>
-                            <p class="text-muted" id="bookAuthor"></p>
-                            <p id="bookDescription"></p>
-                            <p><strong>Price:</strong> <span id="bookPrice"></span></p>
-                            <p><strong>ISBN-10:</strong> <span id="bookISBN10"></span></p>
-                            <p><strong>ISBN-13:</strong> <span id="bookISBN13"></span></p>
-                            <p><strong>Category:</strong> <span id="bookCategory"></span></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
     <footer class="bg-dark text-white pt-5">
         <div class="container">
             <div class="row mb-4">
@@ -155,12 +112,12 @@
         </div>
     </footer>
 
-    <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <script>
         let currentPage = 1;
         const booksPerPage = 25;
+        let allBooks = [];
         let filteredBooks = [];
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -168,7 +125,6 @@
             document.getElementById('searchInput').addEventListener('input', applyFilters);
         });
 
-        // Load the CSV file from Google Sheets
         function loadCSVFile() {
             const csvLink = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSj1Fu63OoSDb2xQxAp16xDzddkIgzb4LLRg-fcgjEKJOi0FRI70vrszirPU8UIeo3unSMHmGP8X9Ro/pub?output=csv';
 
@@ -176,6 +132,7 @@
                 .then(response => response.text())
                 .then(data => {
                     const books = Papa.parse(data, { header: true }).data;
+                    allBooks = books;
                     filteredBooks = books;
                     displayBooks();
                 })
@@ -185,7 +142,6 @@
                 });
         }
 
-        // Function to display books in the container
         function displayBooks() {
             const booksContainer = document.getElementById('booksContainer');
             booksContainer.innerHTML = '';
@@ -200,9 +156,6 @@
                 const description = book['description'] || 'No description available';
                 const price = book['price'] || 'N/A';
                 const photo = book['photo'] || 'placeholder.jpg';
-                const isbn10 = book['isbn10'] || 'N/A';
-                const isbn13 = book['isbn13'] || 'N/A';
-                const category = book['category'] || 'N/A';
 
                 const col = document.createElement('div');
                 col.className = 'col-md-4';
@@ -212,30 +165,39 @@
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title">${title}</h5>
                             <p class="card-text text-muted">by ${author}</p>
-                            <button class="btn btn-outline-primary mt-auto view-details-btn" data-title="${title}" data-author="${author}" data-description="${description}" data-price="${price}" data-photo="${photo}" data-isbn10="${isbn10}" data-isbn13="${isbn13}" data-category="${category}" data-bs-toggle="modal" data-bs-target="#bookDetailsModal">View Details</button>
+                            <div class="description-container">
+                                <p class="card-text short-description">${description.substring(0, 100)}...</p>
+                                <p class="card-text full-description d-none">${description}</p>
+                                <a href="#" class="btn btn-outline-primary mt-auto show-more-btn">Show More</a>
+                            </div>
+                            <p class="card-text">Price: ${price}</p>
                         </div>
                     </div>
                 `;
                 booksContainer.appendChild(col);
             });
 
-            document.querySelectorAll('.view-details-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    document.getElementById('bookTitle').textContent = this.getAttribute('data-title');
-                    document.getElementById('bookAuthor').textContent = this.getAttribute('data-author');
-                    document.getElementById('bookDescription').textContent = this.getAttribute('data-description');
-                    document.getElementById('bookPrice').textContent = this.getAttribute('data-price');
-                    document.getElementById('bookPhoto').src = this.getAttribute('data-photo');
-                    document.getElementById('bookISBN10').textContent = this.getAttribute('data-isbn10');
-                    document.getElementById('bookISBN13').textContent = this.getAttribute('data-isbn13');
-                    document.getElementById('bookCategory').textContent = this.getAttribute('data-category');
+            document.querySelectorAll('.show-more-btn').forEach(button => {
+                button.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const descriptionContainer = this.closest('.description-container');
+                    const shortDescription = descriptionContainer.querySelector('.short-description');
+                    const fullDescription = descriptionContainer.querySelector('.full-description');
+                    if (fullDescription.classList.contains('d-none')) {
+                        fullDescription.classList.remove('d-none');
+                        shortDescription.classList.add('d-none');
+                        this.textContent = 'Show Less';
+                    } else {
+                        fullDescription.classList.add('d-none');
+                        shortDescription.classList.remove('d-none');
+                        this.textContent = 'Show More';
+                    }
                 });
             });
 
             updatePagination();
         }
 
-        // Function to update pagination
         function updatePagination() {
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
@@ -245,4 +207,40 @@
                 const pageItem = document.createElement('li');
                 pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
                 pageItem.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
-                pagination.append
+                pagination.appendChild(pageItem);
+            }
+        }
+
+        function changePage(pageNumber) {
+            currentPage = pageNumber;
+            displayBooks();
+        }
+
+        function applyFilters() {
+            const ageMin = parseInt(document.getElementById('ageRangeMin').value);
+            const ageMax = parseInt(document.getElementById('ageRangeMax').value);
+            const priceMin = parseInt(document.getElementById('priceRangeMin').value);
+            const priceMax = parseInt(document.getElementById('priceRangeMax').value);
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredBooks = allBooks.filter(book => {
+                const bookAge = parseInt(book['age']) || 0;
+                const bookPrice = parseInt(book['price']) || 0;
+                const bookName = book['book name'] ? book['book name'].toLowerCase() : '';
+                const isbn10 = book['isbn10'] ? book['isbn10'].toLowerCase() : '';
+                const isbn13 = book['isbn13'] ? book['isbn13'].toLowerCase() : '';
+
+                return (
+                    bookAge >= ageMin && bookAge <= ageMax &&
+                    bookPrice >= priceMin && bookPrice <= priceMax &&
+                    (bookName.includes(searchQuery) || isbn10.includes(searchQuery) || isbn13.includes(searchQuery))
+                );
+            });
+
+            currentPage = 1;
+            displayBooks();
+        }
+    </script>
+
+</body>
+</html>
