@@ -231,8 +231,8 @@
                 const isbn13 = book['isbn13'] ? book['isbn13'].toLowerCase() : '';
 
                 return (
-                    bookAge >= ageMin && bookAge <= ageMax &&
-                    bookPrice >= priceMin && bookPrice <= priceMax &&
+                    (!isNaN(bookAge) && bookAge >= ageMin && bookAge <= ageMax) &&
+                    (!isNaN(bookPrice) && bookPrice >= priceMin && bookPrice <= priceMax) &&
                     (bookName.includes(searchQuery) || isbn10.includes(searchQuery) || isbn13.includes(searchQuery))
                 );
             });
