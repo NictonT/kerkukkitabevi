@@ -66,7 +66,7 @@
                 </ul>
             </div>
             <div class="mb-4">
-                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN..." oninput="applyFilters()">
+                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN..." onkeyup="applyFilters()">
             </div>
             <div class="row g-4" id="booksContainer"></div>
             <nav aria-label="Page navigation" class="mt-4">
@@ -233,7 +233,7 @@
                 return (
                     (isNaN(ageMin) || isNaN(ageMax) || (bookAge >= ageMin && bookAge <= ageMax)) &&
                     (isNaN(priceMin) || isNaN(priceMax) || (bookPrice >= priceMin && bookPrice <= priceMax)) &&
-                    (searchQuery === '' || bookName.includes(searchQuery) || isbn10.includes(searchQuery) || isbn13.includes(searchQuery))
+                    (bookName.includes(searchQuery) || isbn10.includes(searchQuery) || isbn13.includes(searchQuery))
                 );
             });
 
