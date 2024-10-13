@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Include PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
 
@@ -130,20 +132,26 @@
         const booksPerPage = 25;
         let filteredBooks = [];
 
-        // Load the Excel file from OneDrive
-        function loadExcelFile() {
-            const onedriveFileLink = 'https://onedrive.live.com/download?resid=EbM18b0Xt_VDsLLHO4Kn0JgBJDKZgwSLyM4ralXBEotyWg'; // Replace with your actual OneDrive link
-            fetch(onedriveFileLink)
-                .then(response => response.arrayBuffer())
+        document.addEventListener("DOMContentLoaded", function() {
+            loadCSVFile();
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+        });
+
+        // Load the CSV file from Google Sheets
+        function loadCSVFile() {
+            const csvLink = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSj1Fu63OoSDb2xQxAp16xDzddkIgzb4LLRg-fcgjEKJOi0FRI70vrszirPU8UIeo3unSMHmGP8X9Ro/pub?output=csv';
+
+            fetch(csvLink)
+                .then(response => response.text())
                 .then(data => {
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                    filteredBooks = jsonData;
+                    const books = Papa.parse(data, { header: true }).data;
+                    filteredBooks = books;
                     displayBooks();
                 })
-                .catch(error => console.error('Error fetching the Excel file:', error));
+                .catch(error => {
+                    console.error('Error fetching the CSV file:', error);
+                    document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
+                });
         }
 
         // Function to display books in the container
@@ -156,19 +164,27 @@
             const booksToDisplay = filteredBooks.slice(start, end);
 
             booksToDisplay.forEach(book => {
-                const bookCard = document.createElement('div');
-                bookCard.className = 'col-md-4';
-                bookCard.innerHTML = `
-                    <div class="card h-100 shadow-sm">
-                        <img src="${book['photo'] || 'default.jpg'}" class="card-img-top" alt="${book['book name'] || 'N/A'}">
+                const title = book['book name'] || 'Unknown Title';
+                const author = book['author'] || 'Unknown Author';
+                const description = book['description'] || 'No description available';
+                const price = book['price'] || 'N/A';
+                const photo = book['photo'] || 'placeholder.jpg';
+
+                const col = document.createElement('div');
+                col.className = 'col-md-4';
+                col.innerHTML = `
+                    <div class="card h-100">
+                        <img src="${photo}" class="card-img-top" alt="${title}">
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">${book['book name'] || 'N/A'}</h5>
-                            <p class="card-text text-muted">by ${book['author'] || 'N/A'} (${book['publishing date'] || 'N/A'})</p>
+                            <h5 class="card-title">${title}</h5>
+                            <p class="card-text text-muted">by ${author}</p>
+                            <p class="card-text">${description}</p>
+                            <p class="card-text">Price: ${price}</p>
                             <a href="#" class="btn btn-outline-primary mt-auto">View Details</a>
                         </div>
                     </div>
                 `;
-                booksContainer.appendChild(bookCard);
+                booksContainer.appendChild(col);
             });
 
             updatePagination();
@@ -219,8 +235,8 @@
             displayBooks();
         }
 
-        // Load the Excel file when the page is ready
-        loadExcelFile();
+        // Load the CSV file when the page is ready
+        loadCSVFile();
     </script>
 
 </body>
