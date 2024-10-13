@@ -21,7 +21,28 @@
 
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm">
-        <!-- Navigation content remains unchanged -->
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-4" href="index.html">
+                <img src="photos/logo/logo.png" alt="Kerkuk Kitabevi Logo" class="logo-img me-2" style="max-width: 100px; height: auto;">
+                Kerkuk Kitabevi
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item mx-2">
+                        <a class="nav-link" aria-current="page" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link active" href="books.html">Books</a>
+                    </li>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link" href="contact.html">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </nav>
 
     <!-- Books Section -->
@@ -30,10 +51,32 @@
             <!-- Filters and Search -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="text-center mb-0">Books</h2>
-                <!-- Filter Dropdown remains unchanged -->
+                <button class="btn btn-light border dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">Filter</button>
+                <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+                    <li><a class="dropdown-item" href="#">Category</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><div class="px-4 py-2">
+                        <label for="ageRangeMin" class="form-label">Age Range (Min - Max)</label>
+                        <div class="d-flex align-items-center">
+                            <input type="number" id="ageRangeMin" class="form-control me-2" min="10" max="18" value="10">
+                            <input type="number" id="ageRangeMax" class="form-control" min="10" max="18" value="18">
+                        </div>
+                    </div></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><div class="px-4 py-2">
+                        <label for="priceRange" class="form-label">Price Range (IQD)</label>
+                        <div class="d-flex align-items-center">
+                            <input type="number" id="priceRangeMin" class="form-control me-2" min="250" max="50000" step="250" value="250">
+                            <input type="number" id="priceRangeMax" class="form-control" min="250" max="50000" step="250" value="50000">
+                        </div>
+                    </div></li>
+                    <li class="text-center py-2">
+                        <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                    </li>
+                </ul>
             </div>
             <div class="mb-4">
-                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN...">
+                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN..." oninput="applyFilters()">
             </div>
             <!-- Loading Indicator -->
             <div id="loadingIndicator" class="text-center my-5">
@@ -52,7 +95,40 @@
 
     <!-- Footer -->
     <footer class="bg-dark text-white pt-5">
-        <!-- Footer content remains unchanged -->
+        <div class="container">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <h5>About Us</h5>
+                    <p>At Kerkuk Kitabevi, we connect readers with stories that inspire and entertain. Join our community and dive into the world of books.</p>
+                </div>
+                <div class="col-md-2">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="index.html" class="text-white-50">Home</a></li>
+                        <li><a href="books.html" class="text-white-50">Books</a></li>
+                        <li><a href="contact.html" class="text-white-50">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Contact Info</h5>
+                    <p><i class="fas fa-envelope me-2"></i><a href="mailto:contact@kerkukkitabevi.net" class="text-white-50">contact@kerkukkitabevi.net</a></p>
+                    <p><i class="fas fa-phone me-2"></i><a href="tel:+9647750179472" class="text-white-50">+964 775 017 9472</a></p>
+                    <p><i class="fas fa-map-marker-alt me-2"></i>123 Book Street, Literature City</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Follow Us</h5>
+                    <div class="d-flex">
+                        <a href="https://www.instagram.com/kerkuk_kitabevi82?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="text-white-50 me-3">
+                            <i class="fab fa-instagram fa-2x"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-top border-secondary pt-3 text-center">
+                <p class="mb-0">&copy; 2023 Kerkuk Kitabevi. All rights reserved.</p>
+                <p><a href="index.html" class="text-white-50">Privacy Policy</a> | <a href="index.html" class="text-white-50">Terms of Service</a></p>
+            </div>
+        </div>
     </footer>
 
     <!-- Bootstrap Bundle with Popper -->
