@@ -12,13 +12,13 @@ document.addEventListener("DOMContentLoaded", function() {
 function loadCSVFile() {
     const csvLink = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSj1Fu63OoSDb2xQxAp16xDzddkIgzb4LLRg-fcgjEKJOi0FRI70vrszirPU8UIeo3unSMHmGP8X9Ro/pub?output=csv';
 
-    // Show loading indicator
+    // تحميل ايكون
     document.getElementById('loadingIndicator').style.display = 'block';
 
     fetch(csvLink)
         .then(response => response.text())
         .then(data => {
-            // Use Web Worker to parse CSV
+            // yyyyyyyyyyyyy
             const worker = new Worker('parserWorker.js');
             worker.postMessage(data);
             worker.onmessage = function(e) {
@@ -30,20 +30,20 @@ function loadCSVFile() {
                     filteredBooks = e.data;
                     displayBooks();
                 }
-                // Hide loading indicator
+                // تحميل ايكون ساخله
                 document.getElementById('loadingIndicator').style.display = 'none';
             };
             worker.onerror = function(error) {
                 console.error('Worker error:', error);
                 document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
-                // Hide loading indicator
+                // تحميل ايكون ساخله
                 document.getElementById('loadingIndicator').style.display = 'none';
             };
         })
         .catch(error => {
             console.error('Error fetching the CSV file:', error);
             document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
-            // Hide loading indicator
+            // تحميل ايكون ساخله
             document.getElementById('loadingIndicator').style.display = 'none';
         });
 }
@@ -83,7 +83,7 @@ function displayBooks() {
         booksContainer.appendChild(col);
     });
 
-    // Event delegation for show-more buttons
+    // بو ناده عبادي
     booksContainer.addEventListener('click', function(event) {
         if (event.target.classList.contains('show-more-btn')) {
             event.preventDefault();
