@@ -1,36 +1,14 @@
-/* Search and Filter Styles */
-.search-box {
-    position: relative;
-}
-
-.search-box .fa-search {
-    color: #6c757d;
-}
-
-.dropdown-menu {
-    width: 100%;
-    padding: 1rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.form-label {
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-}
-
-/* Loading Indicator */
-#loadingIndicator {
-    display: none;
-}
-
-/* Card Styles */
+/* Book Cards */
 .card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: #fff;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .card-img-top {
@@ -38,9 +16,90 @@
     object-fit: cover;
 }
 
+/* Search and Filters */
+.search-box {
+    position: relative;
+}
+
+.search-box .fa-search {
+    color: #6c757d;
+    pointer-events: none;
+}
+
+.dropdown-menu {
+    min-width: 250px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Loading State */
+#loadingIndicator {
+    display: none;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .card-img-top {
         height: 200px;
     }
+    
+    .dropdown-menu {
+        width: 100%;
+    }
+}
+
+/* Pagination */
+.pagination {
+    gap: 0.25rem;
+}
+
+.page-link {
+    border-radius: 4px;
+    border: none;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.page-link:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Results Count */
+#resultsCount .alert {
+    margin-bottom: 1rem;
+}
+
+/* Description Container */
+.description-container {
+    margin: 1rem 0;
+}
+
+.show-more-btn {
+    font-size: 0.9rem;
+    padding: 0.25rem 0.75rem;
+}
+
+/* Price Display */
+.card-text strong {
+    color: #28a745;
+}
+
+/* Images */
+.lazyload {
+    opacity: 0;
+    transition: opacity 0.3s ease-in;
+}
+
+.lazyloaded {
+    opacity: 1;
 }
