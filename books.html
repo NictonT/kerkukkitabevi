@@ -13,8 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Papa Parse -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <!-- LazySizes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js" async></script>
 </head>
@@ -48,50 +46,42 @@
     <!-- Books Section -->
     <section class="books-section py-5">
         <div class="container">
-            <!-- Search and Filters -->
-            <div class="row mb-4">
-                <div class="col-md-8 mb-3">
-                    <div class="search-box position-relative">
-                        <input type="text" class="form-control" id="searchInput" 
-                               placeholder="Search books by name or ISBN..." 
-                               oninput="applyFilters()">
-                        <i class="fas fa-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="dropdown">
-                        <button class="btn btn-light border w-100 dropdown-toggle" type="button" 
-                                data-bs-toggle="dropdown">
-                            <i class="fas fa-filter me-2"></i>Filter Options
-                        </button>
-                        <div class="dropdown-menu p-3 w-100">
-                            <div class="price-filter mb-3">
-                                <label class="form-label">Price Range (IQD)</label>
-                                <div class="d-flex gap-2">
-                                    <input type="number" id="priceRangeMin" class="form-control" 
-                                           placeholder="Min" min="250" max="50000" step="250" value="250">
-                                    <input type="number" id="priceRangeMax" class="form-control" 
-                                           placeholder="Max" min="250" max="50000" step="250" value="50000">
-                                </div>
+            <!-- Filters and Search -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-center mb-0">Books</h2>
+                <button class="btn btn-light border dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <div class="px-4 py-2">
+                            <label for="ageRangeMin" class="form-label">Age Range (Min - Max)</label>
+                            <div class="d-flex align-items-center">
+                                <input type="number" id="ageRangeMin" class="form-control me-2" min="10" max="18" value="10">
+                                <input type="number" id="ageRangeMax" class="form-control" min="10" max="18" value="18">
                             </div>
-                            <div class="age-filter mb-3">
-                                <label class="form-label">Age Range</label>
-                                <div class="d-flex gap-2">
-                                    <input type="number" id="ageRangeMin" class="form-control" 
-                                           placeholder="Min" min="10" max="18" value="10">
-                                    <input type="number" id="ageRangeMax" class="form-control" 
-                                           placeholder="Max" min="10" max="18" value="18">
-                                </div>
-                            </div>
-                            <button class="btn btn-primary w-100" onclick="applyFilters()">Apply Filters</button>
                         </div>
-                    </div>
-                </div>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <div class="px-4 py-2">
+                            <label for="priceRange" class="form-label">Price Range (IQD)</label>
+                            <div class="d-flex align-items-center">
+                                <input type="number" id="priceRangeMin" class="form-control me-2" min="250" max="50000" step="250" value="250">
+                                <input type="number" id="priceRangeMax" class="form-control" min="250" max="50000" step="250" value="50000">
+                            </div>
+                        </div>
+                    </li>
+                    <li class="text-center py-2">
+                        <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                    </li>
+                </ul>
             </div>
-
-            <!-- Results Count -->
-            <div id="resultsCount" class="mb-3"></div>
-
+            <div class="mb-4">
+                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN..." oninput="applyFilters()">
+            </div>
+            
             <!-- Loading Indicator -->
             <div id="loadingIndicator" class="text-center my-5">
                 <div class="spinner-border" role="status">
@@ -100,9 +90,7 @@
             </div>
 
             <!-- Books Container -->
-            <div class="row g-4" id="booksContainer">
-                <!-- Books will be loaded here -->
-            </div>
+            <div class="row g-4" id="booksContainer"></div>
 
             <!-- Pagination -->
             <nav aria-label="Page navigation" class="mt-4">
@@ -135,8 +123,8 @@
                 </div>
                 <div class="col-md-3">
                     <h5>Follow Us</h5>
-                    <div class="social-links">
-                        <a href="https://www.instagram.com/kerkuk_kitabevi82" class="text-white-50">
+                    <div class="d-flex">
+                        <a href="https://www.instagram.com/kerkuk_kitabevi82" class="text-white-50 me-3">
                             <i class="fab fa-instagram fa-2x"></i>
                         </a>
                     </div>
@@ -150,9 +138,172 @@
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Your existing JavaScript code -->
+    
+    <!-- Custom Script -->
     <script>
-        // Your existing JavaScript code here
+        let currentPage = 1;
+        const booksPerPage = 25;
+        let allBooks = [];
+        let filteredBooks = [];
+
+        document.addEventListener("DOMContentLoaded", function() {
+            loadCSVFile();
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', debounce(applyFilters, 300));
+        });
+
+        function loadCSVFile() {
+            const csvLink = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSj1Fu63OoSDb2xQxAp16xDzddkIgzb4LLRg-fcgjEKJOi0FRI70vrszirPU8UIeo3unSMHmGP8X9Ro/pub?output=csv';
+            
+            document.getElementById('loadingIndicator').style.display = 'block';
+
+            fetch(csvLink)
+                .then(response => response.text())
+                .then(data => {
+                    const worker = new Worker('parserWorker.js');
+                    worker.postMessage(data);
+                    
+                    worker.onmessage = function(e) {
+                        if (e.data.error) {
+                            console.error('Worker error:', e.data.error);
+                            document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
+                        } else {
+                            allBooks = e.data;
+                            filteredBooks = e.data;
+                            displayBooks();
+                        }
+                        document.getElementById('loadingIndicator').style.display = 'none';
+                        worker.terminate();
+                    };
+                })
+                .catch(error => {
+                    console.error('Error fetching the CSV file:', error);
+                    document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                });
+        }
+
+        function displayBooks() {
+            const booksContainer = document.getElementById('booksContainer');
+            booksContainer.innerHTML = '';
+
+            const start = (currentPage - 1) * booksPerPage;
+            const end = start + booksPerPage;
+            const booksToDisplay = filteredBooks.slice(start, end);
+
+            booksToDisplay.forEach(book => {
+                if (!book['book name']) return;
+
+                const title = book['book name'] || 'Unknown Title';
+                const author = book['author'] || 'Unknown Author';
+                const description = book['description'] || 'No description available';
+                const price = book['price'] || 'N/A';
+                const photo = book['photo'] || 'placeholder.jpg';
+
+                const col = document.createElement('div');
+                col.className = 'col-md-4';
+                col.innerHTML = `
+                    <div class="card h-100">
+                        <img data-src="${photo}" class="card-img-top lazyload" alt="${title}">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">${title}</h5>
+                            <p class="card-text text-muted">by ${author}</p>
+                            <div class="description-container">
+                                <p class="card-text short-description">${description.substring(0, 100)}...</p>
+                                <p class="card-text full-description d-none">${description}</p>
+                                <a href="#" class="btn btn-outline-primary mt-auto show-more-btn">Show More</a>
+                            </div>
+                            <p class="card-text mt-auto"><strong>Price: ${price} IQD</strong></p>
+                        </div>
+                    </div>
+                `;
+                booksContainer.appendChild(col);
+            });
+
+            // Event delegation for show-more buttons
+            booksContainer.addEventListener('click', function(event) {
+                if (event.target.classList.contains('show-more-btn')) {
+                    event.preventDefault();
+                    const button = event.target;
+                    const descriptionContainer = button.closest('.description-container');
+                    const shortDescription = descriptionContainer.querySelector('.short-description');
+                    const fullDescription = descriptionContainer.querySelector('.full-description');
+                    if (fullDescription.classList.contains('d-none')) {
+                        fullDescription.classList.remove('d-none');
+                        shortDescription.classList.add('d-none');
+                        button.textContent = 'Show Less';
+                    } else {
+                        fullDescription.classList.add('d-none');
+                        shortDescription.classList.remove('d-none');
+                        button.textContent = 'Show More';
+                    }
+                }
+            });
+
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageItem = document.createElement('li');
+                pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                pageItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    changePage(i);
+                });
+                pagination.appendChild(pageItem);
+            }
+        }
+
+        function changePage(pageNumber) {
+            currentPage = pageNumber;
+            displayBooks();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function applyFilters() {
+            const ageMin = parseInt(document.getElementById('ageRangeMin').value);
+            const ageMax = parseInt(document.getElementById('ageRangeMax').value);
+            const priceMin = parseInt(document.getElementById('priceRangeMin').value);
+            const priceMax = parseInt(document.getElementById('priceRangeMax').value);
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredBooks = allBooks.filter(book => {
+                if (!book['book name']) return false;
+                
+                const bookAge = parseInt(book['age']) || 0;
+                const bookPrice = parseInt(book['price']) || 0;
+                const bookName = book['book name'].toLowerCase();
+                const author = (book['author'] || '').toLowerCase();
+                const isbn10 = (book['isbn10'] || '').toString().toLowerCase();
+                const isbn13 = (book['isbn13'] || '').toString().toLowerCase();
+
+                return (
+                    (isNaN(ageMin) || isNaN(ageMax) || (bookAge >= ageMin && bookAge <= ageMax)) &&
+                    (isNaN(priceMin) || isNaN(priceMax) || (bookPrice >= priceMin && bookPrice <= priceMax)) &&
+                    (bookName.includes(searchQuery) || author.includes(searchQuery) || 
+                     isbn10.includes(searchQuery) || isbn13.includes(searchQuery))
+                );
+            });
+
+            currentPage = 1;
+            displayBooks();
+        }
+
+        function debounce(func, delay) {
+            let debounceTimer;
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
     </script>
 </body>
 </html>
