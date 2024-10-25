@@ -96,7 +96,7 @@ function createBookCard(book) {
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
     
- // Handle photo path
+    // Handle photo path
     let photo = 'photos/logo/placeholder.jpg'; // default placeholder
     if (book['photo']) {
         // If the photo value doesn't include the full path, add it
@@ -143,7 +143,18 @@ function createBookDetailsModal(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
+    
+    // Handle photo path
+    let photo = 'photos/logo/placeholder.jpg'; // default placeholder
+    if (book['photo']) {
+        // If the photo value doesn't include the full path, add it
+        if (!book['photo'].includes('photos/logo/')) {
+            photo = `photos/logo/book photos/${book['photo']}`;
+        } else {
+            photo = book['photo'];
+        }
+    }
+
     const description = book['description'] || null;
     const isbn10 = book['ISBN 10'] || book['isbn10'] || null;
     const isbn13 = book['ISBN 13'] || book['isbn13'] || null;
@@ -154,96 +165,56 @@ function createBookDetailsModal(book) {
     const publishingDate = book['publishing_date'] || book['publishing date'] || null;
     const status = book['status'] || null;
 
-    // Group the details into left and right columns
-    const leftColumnDetails = [
-        { label: 'Language', value: language },
-        { label: 'Category', value: category },
-        { label: 'Age Range', value: age },
-        { label: 'Pages', value: papers }
-    ];
-
-    const rightColumnDetails = [
-        { label: 'ISBN 10', value: isbn10 },
-        { label: 'ISBN 13', value: isbn13 },
-        { label: 'Publishing Date', value: publishingDate }
-    ];
-
-    // Function to create details list
-    const createDetailsList = (details) => {
-        return details
-            .filter(detail => detail.value)
-            .map(detail => `
-                <div class="mb-3">
-                    <strong class="d-block text-dark mb-1">${detail.label}:</strong>
-                    <span class="text-muted">${detail.value}</span>
-                </div>
-            `).join('');
+    // Create details list (only showing non-null values)
+    const createDetailItem = (label, value) => {
+        if (!value) return '';
+        return `
+            <div class="mb-3">
+                <strong class="d-block text-dark mb-1">${label}:</strong>
+                <span class="text-muted">${value}</span>
+            </div>
+        `;
     };
 
     return `
         <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    <div class="modal-header border-bottom">
-                        <h5 class="modal-title fs-4 fw-bold">Book Details</h5>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Book Details</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body p-4">
+                    <div class="modal-body">
                         <div class="row">
-                            <!-- Left side - Photo -->
-                            <div class="col-md-4 mb-4 mb-md-0">
-                                <div class="position-relative rounded overflow-hidden shadow-sm" style="padding-top: 133%;">
-                                    <img src="${photo}" 
-                                         class="position-absolute top-0 start-0 w-100 h-100" 
-                                         alt="${title}"
-                                         onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'"
-                                         style="object-fit: contain;">
-                                </div>
-
-                                <div class="mt-4">
-                                    ${price || status ? `
-                                        <div class="d-flex flex-wrap gap-2 justify-content-center">
-                                            ${status ? `
-                                                <span class="badge ${status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary'} px-3 py-2">
-                                                    ${status}
-                                                </span>
-                                            ` : ''}
-                                            ${price ? `
-                                                <span class="badge bg-primary px-3 py-2">
-                                                    ${price}
-                                                </span>
-                                            ` : ''}
-                                        </div>
-                                    ` : ''}
-
-                                    ${status?.toLowerCase() === 'available' ? `
-                                        <button class="btn btn-success w-100 mt-3" 
-                                                onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
-                                            <i class="fas fa-shopping-cart me-2"></i>Buy Now
-                                        </button>
-                                    ` : '<button class="btn btn-secondary w-100 mt-3" disabled>Sold Out</button>'}
-                                </div>
+                            <div class="col-md-4">
+                                <img src="${photo}" 
+                                     class="img-fluid" 
+                                     alt="${title}"
+                                     onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'"
+                                     style="width: 100%; object-fit: contain;">
                             </div>
-
-                            <!-- Right side - Details -->
                             <div class="col-md-8">
-                                <h4 class="fs-3 fw-bold mb-2">${title}</h4>
-                                <p class="text-muted fs-5 mb-4">by ${author}</p>
-
-                                ${description ? `
-                                    <div class="mb-4">
-                                        <h5 class="fw-bold mb-2">Description</h5>
-                                        <p class="text-muted">${description}</p>
-                                    </div>
-                                ` : ''}
+                                <h4>${title}</h4>
+                                <p class="text-muted">by ${author}</p>
                                 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        ${createDetailsList(leftColumnDetails)}
-                                    </div>
-                                    <div class="col-md-6">
-                                        ${createDetailsList(rightColumnDetails)}
-                                    </div>
+                                <div class="book-details mt-3">
+                                    ${createDetailItem('Language', language)}
+                                    ${createDetailItem('Pages', papers)}
+                                    ${createDetailItem('Age Range', age)}
+                                    ${createDetailItem('Category', category)}
+                                    ${createDetailItem('ISBN 10', isbn10)}
+                                    ${createDetailItem('ISBN 13', isbn13)}
+                                    ${createDetailItem('Publishing Date', publishingDate)}
+                                    ${createDetailItem('Description', description)}
+                                    ${createDetailItem('Price', price)}
+                                    ${createDetailItem('Status', status)}
+                                    
+                                    ${status?.toLowerCase() === 'available' ? `
+                                        <button class="btn btn-success mt-3" 
+                                                onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
+                                            Buy Now
+                                        </button>
+                                    ` : '<button class="btn btn-secondary mt-3" disabled>Sold Out</button>'}
                                 </div>
                             </div>
                         </div>
