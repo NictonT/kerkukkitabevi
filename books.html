@@ -13,13 +13,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Papa Parse -->
+    <!-- Papa Parse for CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <!-- LazySizes (Lazy Loading) -->
+    <!-- LazySizes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js" async></script>
 </head>
 <body>
-
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm">
         <div class="container">
@@ -27,13 +26,13 @@
                 <img src="photos/logo/logo.png" alt="Kerkuk Kitabevi Logo" class="logo-img me-2" style="max-width: 100px; height: auto;">
                 Kerkuk Kitabevi
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="navbar-nav align-items-center">
                     <li class="nav-item mx-2">
-                        <a class="nav-link" aria-current="page" href="./">Home</a>
+                        <a class="nav-link" href="./">Home</a>
                     </li>
                     <li class="nav-item mx-2">
                         <a class="nav-link active" href="books.html">Books</a>
@@ -52,10 +51,10 @@
             <!-- Filters and Search -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="text-center mb-0">Books</h2>
-                <button class="btn btn-light border dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">Filter</button>
+                <button class="btn btn-light border dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
+                    Filter
+                </button>
                 <ul class="dropdown-menu" aria-labelledby="filterDropdown">
-                    <li><a class="dropdown-item" href="#">Category</a></li>
-                    <li><hr class="dropdown-divider"></li>
                     <li><div class="px-4 py-2">
                         <label for="ageRangeMin" class="form-label">Age Range (Min - Max)</label>
                         <div class="d-flex align-items-center">
@@ -77,7 +76,7 @@
                 </ul>
             </div>
             <div class="mb-4">
-                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN..." oninput="applyFilters()">
+                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN...">
             </div>
             <!-- Loading Indicator -->
             <div id="loadingIndicator" class="text-center my-5">
@@ -119,7 +118,7 @@
                 <div class="col-md-3">
                     <h5>Follow Us</h5>
                     <div class="d-flex">
-                        <a href="https://www.instagram.com/kerkuk_kitabevi82?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="text-white-50 me-3">
+                        <a href="https://www.instagram.com/kerkuk_kitabevi82" class="text-white-50 me-3">
                             <i class="fab fa-instagram fa-2x"></i>
                         </a>
                     </div>
@@ -134,6 +133,7 @@
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <!-- Custom Script -->
     <script>
         let currentPage = 1;
@@ -143,67 +143,107 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             loadCSVFile();
+            
+            // Add debounced search
             const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', debounce(applyFilters, 300));
+            let debounceTimeout;
+            
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(applyFilters, 300);
+            });
         });
 
         function loadCSVFile() {
             const csvLink = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSj1Fu63OoSDb2xQxAp16xDzddkIgzb4LLRg-fcgjEKJOi0FRI70vrszirPU8UIeo3unSMHmGP8X9Ro/pub?output=csv';
-
-            // Show loading indicator
+            
             document.getElementById('loadingIndicator').style.display = 'block';
-
-            fetch(csvLink)
-                .then(response => response.text())
-                .then(data => {
-                    // Use Web Worker to parse CSV
-                    const worker = new Worker('parserWorker.js');
-                    worker.postMessage(data);
-                    worker.onmessage = function(e) {
-                        if (e.data.error) {
-                            console.error('Worker error:', e.data.error);
-                            document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
-                        } else {
-                            allBooks = e.data;
-                            filteredBooks = e.data;
-                            displayBooks();
-                        }
-                        // Hide loading indicator
-                        document.getElementById('loadingIndicator').style.display = 'none';
-                    };
-                    worker.onerror = function(error) {
-                        console.error('Worker error:', error);
-                        document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
-                        // Hide loading indicator
-                        document.getElementById('loadingIndicator').style.display = 'none';
-                    };
-                })
-                .catch(error => {
-                    console.error('Error fetching the CSV file:', error);
-                    document.getElementById('booksContainer').innerHTML = '<p>Error loading data.</p>';
-                    // Hide loading indicator
+            
+            Papa.parse(csvLink, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    allBooks = results.data;
+                    filteredBooks = results.data;
+                    displayBooks();
                     document.getElementById('loadingIndicator').style.display = 'none';
-                });
+                },
+                error: function(error) {
+                    console.error('Error loading CSV:', error);
+                    document.getElementById('booksContainer').innerHTML = '<p>Error loading books.</p>';
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                }
+            });
+        }
+
+        function applyFilters() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const ageMin = parseInt(document.getElementById('ageRangeMin').value) || 0;
+            const ageMax = parseInt(document.getElementById('ageRangeMax').value) || 100;
+            const priceMin = parseInt(document.getElementById('priceRangeMin').value) || 0;
+            const priceMax = parseInt(document.getElementById('priceRangeMax').value) || 1000000;
+
+            filteredBooks = allBooks.filter(book => {
+                if (!book) return false;
+                
+                const bookName = (book['book name'] || '').toLowerCase();
+                const isbn10 = (book['isbn10'] || '').toString().toLowerCase();
+                const isbn13 = (book['isbn13'] || '').toString().toLowerCase();
+                const bookAge = parseInt(book['age']) || 0;
+                const bookPrice = parseInt(book['price']) || 0;
+
+                const searchMatch = searchQuery === '' || 
+                    bookName.includes(searchQuery) || 
+                    isbn10.includes(searchQuery) || 
+                    isbn13.includes(searchQuery);
+
+                const ageMatch = bookAge >= ageMin && bookAge <= ageMax;
+                const priceMatch = bookPrice >= priceMin && bookPrice <= priceMax;
+
+                return searchMatch && ageMatch && priceMatch;
+            });
+
+            currentPage = 1;
+            displayBooks();
+            
+            // Show results count
+            const resultsCount = document.createElement('div');
+            resultsCount.className = 'alert alert-info mt-2';
+            resultsCount.textContent = `Found ${filteredBooks.length} books`;
+            
+            const container = document.getElementById('booksContainer').parentElement;
+            const existingAlert = container.querySelector('.alert-info');
+            if (existingAlert) {
+                container.removeChild(existingAlert);
+            }
+            container.insertBefore(resultsCount, document.getElementById('booksContainer'));
         }
 
         function displayBooks() {
             const booksContainer = document.getElementById('booksContainer');
             booksContainer.innerHTML = '';
 
+            if (filteredBooks.length === 0) {
+                booksContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">No books found matching your criteria.</div></div>';
+                return;
+            }
+
             const start = (currentPage - 1) * booksPerPage;
-            const end = start + booksPerPage;
+            const end = Math.min(start + booksPerPage, filteredBooks.length);
             const booksToDisplay = filteredBooks.slice(start, end);
 
             booksToDisplay.forEach(book => {
+                if (!book) return;
+                
                 const title = book['book name'] || 'Unknown Title';
                 const author = book['author'] || 'Unknown Author';
                 const description = book['description'] || 'No description available';
                 const price = book['price'] || 'N/A';
                 const photo = book['photo'] || 'placeholder.jpg';
 
-                const col = document.createElement('div');
-                col.className = 'col-md-4';
-                col.innerHTML = `
+                const bookElement = document.createElement('div');
+                bookElement.className = 'col-md-4 mb-4';
+                bookElement.innerHTML = `
                     <div class="card h-100">
                         <img data-src="${photo}" class="card-img-top lazyload" alt="${title}">
                         <div class="card-body d-flex flex-column">
@@ -214,34 +254,34 @@
                                 <p class="card-text full-description d-none">${description}</p>
                                 <a href="#" class="btn btn-outline-primary mt-auto show-more-btn">Show More</a>
                             </div>
-                            <p class="card-text">Price: ${price}</p>
+                            <p class="card-text"><strong>Price: ${price}</strong></p>
                         </div>
                     </div>
                 `;
-                booksContainer.appendChild(col);
-            });
-
-            // Event delegation for show-more buttons
-            booksContainer.addEventListener('click', function(event) {
-                if (event.target.classList.contains('show-more-btn')) {
-                    event.preventDefault();
-                    const button = event.target;
-                    const descriptionContainer = button.closest('.description-container');
-                    const shortDescription = descriptionContainer.querySelector('.short-description');
-                    const fullDescription = descriptionContainer.querySelector('.full-description');
-                    if (fullDescription.classList.contains('d-none')) {
-                        fullDescription.classList.remove('d-none');
-                        shortDescription.classList.add('d-none');
-                        button.textContent = 'Show Less';
-                    } else {
-                        fullDescription.classList.add('d-none');
-                        shortDescription.classList.remove('d-none');
-                        button.textContent = 'Show More';
-                    }
-                }
+                booksContainer.appendChild(bookElement);
             });
 
             updatePagination();
+            
+            // Add event listeners for "Show More" buttons
+            document.querySelectorAll('.show-more-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const descContainer = this.closest('.description-container');
+                    const shortDesc = descContainer.querySelector('.short-description');
+                    const fullDesc = descContainer.querySelector('.full-description');
+                    
+                    if (fullDesc.classList.contains('d-none')) {
+                        fullDesc.classList.remove('d-none');
+                        shortDesc.classList.add('d-none');
+                        this.textContent = 'Show Less';
+                    } else {
+                        fullDesc.classList.add('d-none');
+                        shortDesc.classList.remove('d-none');
+                        this.textContent = 'Show More';
+                    }
+                });
+            });
         }
 
         function updatePagination() {
@@ -261,35 +301,10 @@
             }
         }
 
-        function changePage(pageNumber) {
+    function changePage(pageNumber) {
             currentPage = pageNumber;
             displayBooks();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function applyFilters() {
-            const ageMin = parseInt(document.getElementById('ageRangeMin').value);
-            const ageMax = parseInt(document.getElementById('ageRangeMax').value);
-            const priceMin = parseInt(document.getElementById('priceRangeMin').value);
-            const priceMax = parseInt(document.getElementById('priceRangeMax').value);
-            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-
-            filteredBooks = allBooks.filter(book => {
-                const bookAge = parseInt(book['age']) || 0;
-                const bookPrice = parseInt(book['price']) || 0;
-                const bookName = book['book name'] ? book['book name'].toLowerCase() : '';
-                const isbn10 = book['isbn10'] ? book['isbn10'].toLowerCase() : '';
-                const isbn13 = book['isbn13'] ? book['isbn13'].toLowerCase() : '';
-
-                return (
-                    (isNaN(ageMin) || isNaN(ageMax) || (bookAge >= ageMin && bookAge <= ageMax)) &&
-                    (isNaN(priceMin) || isNaN(priceMax) || (bookPrice >= priceMin && bookPrice <= priceMax)) &&
-                    (bookName.includes(searchQuery) || isbn10.includes(searchQuery) || isbn13.includes(searchQuery))
-                );
-            });
-
-            currentPage = 1;
-            displayBooks();
         }
 
         function debounce(func, delay) {
@@ -302,6 +317,5 @@
             };
         }
     </script>
-
 </body>
 </html>
