@@ -91,34 +91,118 @@ function displayBooks() {
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
-    const description = book['description'] || 'No description available';
     const price = book['price'] ? `${book['price']} IQD` : 'N/A';
-    // Add proper path to book photos
     const photo = book['photo'] ? `${CONFIG.paths.bookImages}${book['photo']}` : CONFIG.paths.placeholderImage;
-    const shortDesc = description.length > 100 ? `${description.substring(0, 100)}...` : description;
-
+    
     return `
         <div class="col-md-4 mb-4">
             <div class="card h-100">
                 <img data-src="${photo}" 
                      class="card-img-top lazyload" 
                      alt="${title}" 
+                     style="height: 300px; object-fit: contain;"
                      onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'">
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title">${title}</h5>
                     <p class="card-text text-muted">by ${author}</p>
-                    <div class="description-container">
-                        <p class="card-text short-description">${shortDesc}</p>
-                        ${description.length > 100 ? `
-                            <p class="card-text full-description d-none">${description}</p>
-                            <button class="btn btn-outline-primary btn-sm mt-2 show-more-btn">Show More</button>
-                        ` : ''}
-                    </div>
                     <p class="card-text mt-auto"><strong>Price: ${price}</strong></p>
+                    <button class="btn btn-primary mt-2" 
+                            onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}')">
+                        View Details <i class="fas fa-info-circle"></i>
+                    </button>
                 </div>
             </div>
         </div>
     `;
+}
+
+function createBookDetailsModal(book) {
+    const title = book['book name'] || 'Unknown Title';
+    const author = book['author'] || 'Unknown Author';
+    const price = book['price'] ? `${book['price']} IQD` : 'N/A';
+    const photo = book['photo'] ? `${CONFIG.paths.bookImages}${book['photo']}` : CONFIG.paths.placeholderImage;
+    const description = book['description'] || 'No description available';
+    const isbn10 = book['isbn10'] || 'N/A';
+    const isbn13 = book['isbn13'] || 'N/A';
+    const language = book['language'] || 'N/A';
+    const category = book['category'] || 'N/A';
+    const age = book['age'] || 'N/A';
+    const papers = book['papers'] || 'N/A';
+    const publishingDate = book['publishing_date'] || 'N/A';
+    const status = book['status'] || 'N/A';
+
+    return `
+        <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Book Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <!-- Left side - Photo -->
+                            <div class="col-md-4">
+                                <img src="${photo}" 
+                                     class="img-fluid" 
+                                     alt="${title}"
+                                     onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'"
+                                     style="width: 100%; object-fit: contain;">
+                            </div>
+                            <!-- Right side - Details -->
+                            <div class="col-md-8">
+                                <h4>${title}</h4>
+                                <p class="text-muted">by ${author}</p>
+                                
+                                <div class="book-details mt-3">
+                                    <p><strong>ISBN 10:</strong> ${isbn10}</p>
+                                    <p><strong>ISBN 13:</strong> ${isbn13}</p>
+                                    <p><strong>Language:</strong> ${language}</p>
+                                    <p><strong>Description:</strong> ${description}</p>
+                                    <p><strong>Category:</strong> ${category}</p>
+                                    <p><strong>Age Range:</strong> ${age}</p>
+                                    <p><strong>Pages:</strong> ${papers}</p>
+                                    <p><strong>Publishing Date:</strong> ${publishingDate}</p>
+                                    <p><strong>Price:</strong> ${price}</p>
+                                    <p><strong>Status:</strong> ${status}</p>
+                                    
+                                    ${status.toLowerCase() === 'available' ? `
+                                        <button class="btn btn-success mt-3" 
+                                                onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
+                                            Buy Now
+                                        </button>
+                                    ` : '<button class="btn btn-secondary mt-3" disabled>Sold Out</button>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function showBookDetails(bookJSON) {
+    const book = JSON.parse(decodeURIComponent(bookJSON));
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('bookDetailsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+    modal.show();
+}
+
+function sendPurchaseEmail(bookTitle) {
+    const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
+    const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
+    window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
 
 // Filter Functions
