@@ -95,7 +95,17 @@ function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
+    
+ // Handle photo path
+    let photo = 'photos/logo/placeholder.jpg'; // default placeholder
+    if (book['photo']) {
+        // If the photo value doesn't include the full path, add it
+        if (!book['photo'].includes('photos/logo/')) {
+            photo = `photos/logo/book photos/${book['photo']}`;
+        } else {
+            photo = book['photo'];
+        }
+    }
     
     return `
         <div class="col-md-4 mb-4">
