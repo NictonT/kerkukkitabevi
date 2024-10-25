@@ -5,6 +5,10 @@ const CONFIG = {
     defaultFilters: {
         age: { min: 10, max: 18 },
         price: { min: 250, max: 50000 }
+    },
+    paths: {
+        placeholderImage: 'photos/logo/placeholder.jpg',
+        bookImages: 'photos/books/'
     }
 };
 
@@ -83,19 +87,23 @@ function displayBooks() {
     updateResultsCount();
     updatePagination();
 }
-
+//verrrrrrrrry important books section
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const description = book['description'] || 'No description available';
     const price = book['price'] ? `${book['price']} IQD` : 'N/A';
-    const photo = book['photo'] || 'placeholder.jpg';
+    // Add proper path to book photos
+    const photo = book['photo'] ? `${CONFIG.paths.bookImages}${book['photo']}` : CONFIG.paths.placeholderImage;
     const shortDesc = description.length > 100 ? `${description.substring(0, 100)}...` : description;
 
     return `
         <div class="col-md-4 mb-4">
             <div class="card h-100">
-                <img data-src="${photo}" class="card-img-top lazyload" alt="${title}" onerror="this.src='placeholder.jpg'">
+                <img data-src="${photo}" 
+                     class="card-img-top lazyload" 
+                     alt="${title}" 
+                     onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'">
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title">${title}</h5>
                     <p class="card-text text-muted">by ${author}</p>
