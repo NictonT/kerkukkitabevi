@@ -95,7 +95,13 @@ function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    const photo = book['photo'] ? `${CONFIG.paths.bookImages}${book['photo']}` : CONFIG.paths.placeholderImage;
+    
+    // Fix photo path handling
+    let photo = CONFIG.paths.placeholderImage; // Default placeholder
+    if (book['photo'] || book['Photo']) {
+        const photoPath = book['photo'] || book['Photo'];
+        photo = photoPath.startsWith('http') ? photoPath : `photos/logo/book photos/${photoPath}`;
+    }
     
     return `
         <div class="col-md-4 mb-4">
@@ -105,7 +111,7 @@ function createBookCard(book) {
                          class="card-img-top lazyload position-absolute top-0 start-0 w-100 h-100 p-3" 
                          alt="${title}" 
                          style="object-fit: contain;"
-                         onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'">
+                         onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
                 </div>
                 <div class="card-body d-flex flex-column p-4">
                     <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
@@ -133,15 +139,22 @@ function createBookDetailsModal(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    const photo = book['photo'] ? `${CONFIG.paths.bookImages}${book['photo']}` : CONFIG.paths.placeholderImage;
+    
+    // Fix photo path handling
+    let photo = CONFIG.paths.placeholderImage; // Default placeholder
+    if (book['photo'] || book['Photo']) {
+        const photoPath = book['photo'] || book['Photo'];
+        photo = photoPath.startsWith('http') ? photoPath : `photos/logo/book photos/${photoPath}`;
+    }
+
     const description = book['description'] || null;
-    const isbn10 = book['isbn10'] || null;
-    const isbn13 = book['isbn13'] || null;
+    const isbn10 = book['ISBN 10'] || book['isbn10'] || null;
+    const isbn13 = book['ISBN 13'] || book['isbn13'] || null;
     const language = book['language'] || null;
     const category = book['category'] || null;
     const age = book['age'] || null;
     const papers = book['papers'] || null;
-    const publishingDate = book['publishing_date'] || null;
+    const publishingDate = book['publishing_date'] || book['publishing date'] || null;
     const status = book['status'] || null;
 
     // Group the details into left and right columns
@@ -186,7 +199,7 @@ function createBookDetailsModal(book) {
                                     <img src="${photo}" 
                                          class="position-absolute top-0 start-0 w-100 h-100" 
                                          alt="${title}"
-                                         onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'"
+                                         onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'"
                                          style="object-fit: contain;">
                                 </div>
 
