@@ -91,7 +91,7 @@ function displayBooks() {
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
-    const price = book['price'] ? `${book['price']} IQD` : 'N/A';
+    const price = book['price'] ? `${book['price']} IQD` : null;
     const photo = book['photo'] ? `${CONFIG.paths.bookImages}${book['photo']}` : CONFIG.paths.placeholderImage;
     
     return `
@@ -108,14 +108,17 @@ function createBookCard(book) {
                     <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
                     <p class="card-text text-muted mb-3">by ${author}</p>
                     <div class="mt-auto">
-                        <p class="card-text mb-3">
-                            <span class="badge bg-secondary px-3 py-2">${price}</span>
-                        </p>
-                        <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" 
-                                onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}')">
+                        ${price ? `
+                            <p class="card-text mb-3">
+                                <span class="badge bg-secondary px-3 py-2">${price}</span>
+                            </p>
+                        ` : ''}
+                        <a href="#" 
+                           class="btn btn-outline-primary mt-auto w-100" 
+                           onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
                             View Details
-                            <i class="fas fa-info-circle"></i>
-                        </button>
+                            <i class="fas fa-info-circle ms-2"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -126,30 +129,56 @@ function createBookCard(book) {
 function createBookDetailsModal(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
-    const price = book['price'] ? `${book['price']} IQD` : 'N/A';
+    const price = book['price'] ? `${book['price']} IQD` : null;
     const photo = book['photo'] ? `${CONFIG.paths.bookImages}${book['photo']}` : CONFIG.paths.placeholderImage;
-    const description = book['description'] || 'No description available';
-    const isbn10 = book['isbn10'] || 'N/A';
-    const isbn13 = book['isbn13'] || 'N/A';
-    const language = book['language'] || 'N/A';
-    const category = book['category'] || 'N/A';
-    const age = book['age'] || 'N/A';
-    const papers = book['papers'] || 'N/A';
-    const publishingDate = book['publishing_date'] || 'N/A';
-    const status = book['status'] || 'N/A';
+    const description = book['description'] || null;
+    const isbn10 = book['isbn10'] || null;
+    const isbn13 = book['isbn13'] || null;
+    const language = book['language'] || null;
+    const category = book['category'] || null;
+    const age = book['age'] || null;
+    const papers = book['papers'] || null;
+    const publishingDate = book['publishing_date'] || null;
+    const status = book['status'] || null;
+
+    // Group the details into left and right columns
+    const leftColumnDetails = [
+        { label: 'Language', value: language },
+        { label: 'Category', value: category },
+        { label: 'Age Range', value: age },
+        { label: 'Pages', value: papers }
+    ];
+
+    const rightColumnDetails = [
+        { label: 'ISBN 10', value: isbn10 },
+        { label: 'ISBN 13', value: isbn13 },
+        { label: 'Publishing Date', value: publishingDate }
+    ];
+
+    // Function to create details list
+    const createDetailsList = (details) => {
+        return details
+            .filter(detail => detail.value)
+            .map(detail => `
+                <div class="mb-3">
+                    <strong class="d-block text-dark mb-1">${detail.label}:</strong>
+                    <span class="text-muted">${detail.value}</span>
+                </div>
+            `).join('');
+    };
 
     return `
         <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    <div class="modal-header border-bottom-0 pb-0">
+                    <div class="modal-header border-bottom">
                         <h5 class="modal-title fs-4 fw-bold">Book Details</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4">
-                        <div class="row g-4">
+                        <div class="row">
                             <!-- Left side - Photo -->
-                            <div class="col-md-4">
+                            <div class="col-md-4 mb-4 mb-md-0">
                                 <div class="position-relative rounded overflow-hidden shadow-sm" style="padding-top: 133%;">
                                     <img src="${photo}" 
                                          class="position-absolute top-0 start-0 w-100 h-100" 
@@ -157,64 +186,51 @@ function createBookDetailsModal(book) {
                                          onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'"
                                          style="object-fit: contain;">
                                 </div>
+
+                                <div class="mt-4">
+                                    ${price || status ? `
+                                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                            ${status ? `
+                                                <span class="badge ${status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary'} px-3 py-2">
+                                                    ${status}
+                                                </span>
+                                            ` : ''}
+                                            ${price ? `
+                                                <span class="badge bg-primary px-3 py-2">
+                                                    ${price}
+                                                </span>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+
+                                    ${status?.toLowerCase() === 'available' ? `
+                                        <button class="btn btn-success w-100 mt-3" 
+                                                onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
+                                            <i class="fas fa-shopping-cart me-2"></i>Buy Now
+                                        </button>
+                                    ` : '<button class="btn btn-secondary w-100 mt-3" disabled>Sold Out</button>'}
+                                </div>
                             </div>
+
                             <!-- Right side - Details -->
                             <div class="col-md-8">
                                 <h4 class="fs-3 fw-bold mb-2">${title}</h4>
                                 <p class="text-muted fs-5 mb-4">by ${author}</p>
-                                
-                                <div class="book-details">
-                                    <div class="row g-3">
-                                        <div class="col-sm-6">
-                                            <p class="mb-1"><strong>ISBN 10:</strong></p>
-                                            <p class="text-muted">${isbn10}</p>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <p class="mb-1"><strong>ISBN 13:</strong></p>
-                                            <p class="text-muted">${isbn13}</p>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <p class="mb-1"><strong>Language:</strong></p>
-                                            <p class="text-muted">${language}</p>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <p class="mb-1"><strong>Category:</strong></p>
-                                            <p class="text-muted">${category}</p>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <p class="mb-1"><strong>Age Range:</strong></p>
-                                            <p class="text-muted">${age}</p>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <p class="mb-1"><strong>Pages:</strong></p>
-                                            <p class="text-muted">${papers}</p>
-                                        </div>
-                                        <div class="col-12">
-                                            <p class="mb-1"><strong>Publishing Date:</strong></p>
-                                            <p class="text-muted">${publishingDate}</p>
-                                        </div>
-                                        <div class="col-12">
-                                            <p class="mb-1"><strong>Description:</strong></p>
-                                            <p class="text-muted">${description}</p>
-                                        </div>
-                                    </div>
 
-                                    <div class="d-flex align-items-center gap-3 mt-4">
-                                        <span class="badge ${status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary'} px-3 py-2">
-                                            ${status}
-                                        </span>
-                                        <span class="badge bg-primary px-3 py-2">
-                                            ${price}
-                                        </span>
+                                ${description ? `
+                                    <div class="mb-4">
+                                        <h5 class="fw-bold mb-2">Description</h5>
+                                        <p class="text-muted">${description}</p>
                                     </div>
-                                    
-                                    ${status.toLowerCase() === 'available' ? `
-                                        <button class="btn btn-success w-100 mt-4 d-flex align-items-center justify-content-center gap-2" 
-                                                onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
-                                            Buy Now
-                                            <i class="fas fa-shopping-cart"></i>
-                                        </button>
-                                    ` : '<button class="btn btn-secondary w-100 mt-4" disabled>Sold Out</button>'}
+                                ` : ''}
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        ${createDetailsList(leftColumnDetails)}
+                                    </div>
+                                    <div class="col-md-6">
+                                        ${createDetailsList(rightColumnDetails)}
+                                    </div>
                                 </div>
                             </div>
                         </div>
