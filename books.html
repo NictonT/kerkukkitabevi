@@ -13,8 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Papa Parse for CSV -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <!-- LazySizes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js" async></script>
 </head>
@@ -48,44 +46,38 @@
     <!-- Books Section -->
     <section class="books-section py-5">
         <div class="container">
-            <!-- Filters and Search -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="text-center mb-0">Books</h2>
-                <button class="btn btn-light border dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
-                    Filter
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="filterDropdown">
-                    <li><div class="px-4 py-2">
-                        <label for="ageRangeMin" class="form-label">Age Range (Min - Max)</label>
-                        <div class="d-flex align-items-center">
-                            <input type="number" id="ageRangeMin" class="form-control me-2" min="10" max="18" value="10">
-                            <input type="number" id="ageRangeMax" class="form-control" min="10" max="18" value="18">
+            <!-- Search and Filters -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search books by title or author...">
+                </div>
+                <div class="col-md-4">
+                    <div class="dropdown">
+                        <button class="btn btn-light border w-100 dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
+                            Filter Options
+                        </button>
+                        <div class="dropdown-menu p-3 w-100">
+                            <div class="mb-3">
+                                <label class="form-label">Price Range (IQD)</label>
+                                <div class="d-flex gap-2">
+                                    <input type="number" id="priceMin" class="form-control" placeholder="Min" min="0">
+                                    <input type="number" id="priceMax" class="form-control" placeholder="Max">
+                                </div>
+                            </div>
+                            <button onclick="applyFilters()" class="btn btn-primary w-100">Apply Filters</button>
                         </div>
-                    </div></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><div class="px-4 py-2">
-                        <label for="priceRange" class="form-label">Price Range (IQD)</label>
-                        <div class="d-flex align-items-center">
-                            <input type="number" id="priceRangeMin" class="form-control me-2" min="250" max="50000" step="250" value="250">
-                            <input type="number" id="priceRangeMax" class="form-control" min="250" max="50000" step="250" value="50000">
-                        </div>
-                    </div></li>
-                    <li class="text-center py-2">
-                        <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
-                    </li>
-                </ul>
-            </div>
-            <div class="mb-4">
-                <input type="text" class="form-control" id="searchInput" placeholder="Search books by name or ISBN...">
-            </div>
-            <!-- Loading Indicator -->
-            <div id="loadingIndicator" class="text-center my-5">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                    </div>
                 </div>
             </div>
+
+            <!-- Results Count -->
+            <div id="resultsCount" class="mb-3"></div>
+
             <!-- Books Container -->
-            <div class="row g-4" id="booksContainer"></div>
+            <div class="row g-4" id="booksContainer">
+                <!-- Books will be loaded here -->
+            </div>
+
             <!-- Pagination -->
             <nav aria-label="Page navigation" class="mt-4">
                 <ul class="pagination justify-content-center" id="pagination"></ul>
@@ -126,194 +118,147 @@
             </div>
             <div class="border-top border-secondary pt-3 text-center">
                 <p class="mb-0">&copy; 2023 Kerkuk Kitabevi. All rights reserved.</p>
-                <p><a href="./" class="text-white-50">Privacy Policy</a> | <a href="./" class="text-white-50">Terms of Service</a></p>
             </div>
         </div>
     </footer>
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Custom Script -->
     <script>
-        let currentPage = 1;
-        const booksPerPage = 25;
-        let allBooks = [];
-        let filteredBooks = [];
+        // Sample books data - Replace with your actual data
+        const books = [
+            {
+                title: "ben kirke",
+                author: "Unknown Author",
+                price: "9,750",
+                description: "No description available",
+                image: "placeholder.jpg"
+            },
+            // Add more books here
+        ];
 
-        document.addEventListener("DOMContentLoaded", function() {
-            loadCSVFile();
-            
-            // Add debounced search
-            const searchInput = document.getElementById('searchInput');
-            let debounceTimeout;
-            
-            searchInput.addEventListener('input', function() {
-                clearTimeout(debounceTimeout);
-                debounceTimeout = setTimeout(applyFilters, 300);
-            });
+        let currentPage = 1;
+        const booksPerPage = 12;
+        let filteredBooks = [...books];
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            displayBooks(books);
+            setupEventListeners();
         });
 
-        function loadCSVFile() {
-            const csvLink = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSj1Fu63OoSDb2xQxAp16xDzddkIgzb4LLRg-fcgjEKJOi0FRI70vrszirPU8UIeo3unSMHmGP8X9Ro/pub?output=csv';
-            
-            document.getElementById('loadingIndicator').style.display = 'block';
-            
-            Papa.parse(csvLink, {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    allBooks = results.data;
-                    filteredBooks = results.data;
-                    displayBooks();
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                },
-                error: function(error) {
-                    console.error('Error loading CSV:', error);
-                    document.getElementById('booksContainer').innerHTML = '<p>Error loading books.</p>';
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                }
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', debounce(function() {
+                applyFilters();
+            }, 300));
+
+            const priceInputs = ['priceMin', 'priceMax'].map(id => document.getElementById(id));
+            priceInputs.forEach(input => {
+                input.addEventListener('input', debounce(function() {
+                    applyFilters();
+                }, 300));
             });
         }
 
         function applyFilters() {
-            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-            const ageMin = parseInt(document.getElementById('ageRangeMin').value) || 0;
-            const ageMax = parseInt(document.getElementById('ageRangeMax').value) || 100;
-            const priceMin = parseInt(document.getElementById('priceRangeMin').value) || 0;
-            const priceMax = parseInt(document.getElementById('priceRangeMax').value) || 1000000;
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const priceMin = parseFloat(document.getElementById('priceMin').value) || 0;
+            const priceMax = parseFloat(document.getElementById('priceMax').value) || Infinity;
 
-            filteredBooks = allBooks.filter(book => {
-                if (!book) return false;
+            filteredBooks = books.filter(book => {
+                const matchesSearch = book.title.toLowerCase().includes(searchQuery) ||
+                                   book.author.toLowerCase().includes(searchQuery);
                 
-                const bookName = (book['book name'] || '').toLowerCase();
-                const isbn10 = (book['isbn10'] || '').toString().toLowerCase();
-                const isbn13 = (book['isbn13'] || '').toString().toLowerCase();
-                const bookAge = parseInt(book['age']) || 0;
-                const bookPrice = parseInt(book['price']) || 0;
+                const price = parseFloat(book.price.replace(/,/g, '')) || 0;
+                const matchesPrice = price >= priceMin && 
+                                   (priceMax === Infinity || price <= priceMax);
 
-                const searchMatch = searchQuery === '' || 
-                    bookName.includes(searchQuery) || 
-                    isbn10.includes(searchQuery) || 
-                    isbn13.includes(searchQuery);
-
-                const ageMatch = bookAge >= ageMin && bookAge <= ageMax;
-                const priceMatch = bookPrice >= priceMin && bookPrice <= priceMax;
-
-                return searchMatch && ageMatch && priceMatch;
+                return matchesSearch && matchesPrice;
             });
 
             currentPage = 1;
-            displayBooks();
-            
-            // Show results count
-            const resultsCount = document.createElement('div');
-            resultsCount.className = 'alert alert-info mt-2';
-            resultsCount.textContent = `Found ${filteredBooks.length} books`;
-            
-            const container = document.getElementById('booksContainer').parentElement;
-            const existingAlert = container.querySelector('.alert-info');
-            if (existingAlert) {
-                container.removeChild(existingAlert);
-            }
-            container.insertBefore(resultsCount, document.getElementById('booksContainer'));
+            displayBooks(filteredBooks);
+            updateResultsCount();
         }
 
-        function displayBooks() {
-            const booksContainer = document.getElementById('booksContainer');
-            booksContainer.innerHTML = '';
+        function displayBooks(booksToShow) {
+            const container = document.getElementById('booksContainer');
+            const start = (currentPage - 1) * booksPerPage;
+            const end = start + booksPerPage;
+            const paginatedBooks = booksToShow.slice(start, end);
 
-            if (filteredBooks.length === 0) {
-                booksContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">No books found matching your criteria.</div></div>';
+            container.innerHTML = '';
+
+            if (paginatedBooks.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-warning">No books found matching your criteria.</div>
+                    </div>`;
                 return;
             }
 
-            const start = (currentPage - 1) * booksPerPage;
-            const end = Math.min(start + booksPerPage, filteredBooks.length);
-            const booksToDisplay = filteredBooks.slice(start, end);
-
-            booksToDisplay.forEach(book => {
-                if (!book) return;
-                
-                const title = book['book name'] || 'Unknown Title';
-                const author = book['author'] || 'Unknown Author';
-                const description = book['description'] || 'No description available';
-                const price = book['price'] || 'N/A';
-                const photo = book['photo'] || 'placeholder.jpg';
-
-                const bookElement = document.createElement('div');
-                bookElement.className = 'col-md-4 mb-4';
-                bookElement.innerHTML = `
-                    <div class="card h-100">
-                        <img data-src="${photo}" class="card-img-top lazyload" alt="${title}">
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">${title}</h5>
-                            <p class="card-text text-muted">by ${author}</p>
-                            <div class="description-container">
-                                <p class="card-text short-description">${description.substring(0, 100)}...</p>
-                                <p class="card-text full-description d-none">${description}</p>
-                                <a href="#" class="btn btn-outline-primary mt-auto show-more-btn">Show More</a>
+            paginatedBooks.forEach(book => {
+                const bookCard = `
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <img data-src="${book.image}" class="card-img-top lazyload" alt="${book.title}">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">${book.title}</h5>
+                                <p class="card-text text-muted">by ${book.author}</p>
+                                <div class="mt-auto">
+                                    <p class="card-text mb-2">${book.description}</p>
+                                    <p class="card-text"><strong>Price: ${book.price} IQD</strong></p>
+                                </div>
                             </div>
-                            <p class="card-text"><strong>Price: ${price}</strong></p>
                         </div>
-                    </div>
-                `;
-                booksContainer.appendChild(bookElement);
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', bookCard);
             });
 
-            updatePagination();
-            
-            // Add event listeners for "Show More" buttons
-            document.querySelectorAll('.show-more-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const descContainer = this.closest('.description-container');
-                    const shortDesc = descContainer.querySelector('.short-description');
-                    const fullDesc = descContainer.querySelector('.full-description');
-                    
-                    if (fullDesc.classList.contains('d-none')) {
-                        fullDesc.classList.remove('d-none');
-                        shortDesc.classList.add('d-none');
-                        this.textContent = 'Show Less';
-                    } else {
-                        fullDesc.classList.add('d-none');
-                        shortDesc.classList.remove('d-none');
-                        this.textContent = 'Show More';
-                    }
-                });
-            });
+            updatePagination(booksToShow.length);
         }
 
-        function updatePagination() {
+        function updateResultsCount() {
+            const resultsCount = document.getElementById('resultsCount');
+            resultsCount.innerHTML = `
+                <div class="alert alert-info">
+                    Found ${filteredBooks.length} book${filteredBooks.length !== 1 ? 's' : ''}
+                </div>`;
+        }
+
+        function updatePagination(totalBooks) {
             const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
-            const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+            const totalPages = Math.ceil(totalBooks / booksPerPage);
 
+            let paginationHTML = '';
             for (let i = 1; i <= totalPages; i++) {
-                const pageItem = document.createElement('li');
-                pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-                pageItem.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    changePage(i);
-                });
-                pagination.appendChild(pageItem);
+                paginationHTML += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+                    </li>`;
             }
+
+            pagination.innerHTML = paginationHTML;
         }
 
-    function changePage(pageNumber) {
-            currentPage = pageNumber;
-            displayBooks();
+        function changePage(page) {
+            currentPage = page;
+            displayBooks(filteredBooks);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function debounce(func, delay) {
-            let debounceTimer;
-            return function() {
-                const context = this;
-                const args = arguments;
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => func.apply(context, args), delay);
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
             };
         }
     </script>
