@@ -95,20 +95,14 @@ function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    
-    // Fix photo path handling
-    let photo = CONFIG.paths.placeholderImage; // Default placeholder
-    if (book['photo'] || book['Photo']) {
-        const photoPath = book['photo'] || book['Photo'];
-        photo = photoPath.startsWith('http') ? photoPath : `photos/logo/book photos/${photoPath}`;
-    }
+    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
     
     return `
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
                 <div class="position-relative" style="padding-top: 100%;">
-                    <img data-src="${photo}" 
-                         class="card-img-top lazyload position-absolute top-0 start-0 w-100 h-100 p-3" 
+                    <img src="${photo}" 
+                         class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
                          alt="${title}" 
                          style="object-fit: contain;"
                          onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
@@ -139,14 +133,7 @@ function createBookDetailsModal(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    
-    // Fix photo path handling
-    let photo = CONFIG.paths.placeholderImage; // Default placeholder
-    if (book['photo'] || book['Photo']) {
-        const photoPath = book['photo'] || book['Photo'];
-        photo = photoPath.startsWith('http') ? photoPath : `photos/logo/book photos/${photoPath}`;
-    }
-
+    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
     const description = book['description'] || null;
     const isbn10 = book['ISBN 10'] || book['isbn10'] || null;
     const isbn13 = book['ISBN 13'] || book['isbn13'] || null;
@@ -279,6 +266,7 @@ function sendPurchaseEmail(bookTitle) {
     const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
+//gfhdjsklskjhgfdfhjkloiuytrsdfghfx4ec65rv78b7
 function showBookDetails(bookJSON) {
     const book = JSON.parse(decodeURIComponent(bookJSON));
     
