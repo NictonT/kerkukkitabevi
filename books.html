@@ -8,7 +8,7 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="books.css">
+    <link rel="stylesheet" href="styles.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
@@ -23,7 +23,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold fs-4" href="./">
-                <img src="photos/logo/logo.png" alt="Kerkuk Kitabevi Logo" class="logo-img">
+                <img src="photos/logo/logo.png" alt="Kerkuk Kitabevi Logo" class="logo-img me-2" style="max-width: 100px; height: auto;">
                 Kerkuk Kitabevi
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -49,32 +49,41 @@
     <section class="books-section py-5">
         <div class="container">
             <!-- Search and Filters -->
-            <div class="search-filter-container mb-4">
-                <div class="row">
-                    <div class="col-md-8 mb-3 mb-md-0">
-                        <div class="search-container">
-                            <input type="text" class="form-control" id="searchInput" placeholder="Search books by title or author...">
-                            <i class="fas fa-search search-icon"></i>
-                        </div>
+            <div class="row mb-4">
+                <div class="col-md-8 mb-3">
+                    <div class="search-box position-relative">
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Search books by name or ISBN..." 
+                               oninput="applyFilters()">
+                        <i class="fas fa-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
                     </div>
-                    <div class="col-md-4">
-                        <div class="dropdown">
-                            <button class="btn btn-filter w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-filter me-2"></i>Filter Options
-                            </button>
-                            <div class="dropdown-menu p-3">
-                                <div class="filter-section">
-                                    <label class="filter-label">Price Range (IQD)</label>
-                                    <div class="d-flex gap-2">
-                                        <div class="price-input">
-                                            <input type="number" id="priceMin" class="form-control" placeholder="Min" min="0">
-                                        </div>
-                                        <div class="price-input">
-                                            <input type="number" id="priceMax" class="form-control" placeholder="Max">
-                                        </div>
-                                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dropdown">
+                        <button class="btn btn-light border w-100 dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-filter me-2"></i>Filter Options
+                        </button>
+                        <div class="dropdown-menu p-3 w-100">
+                            <div class="price-filter mb-3">
+                                <label class="form-label">Price Range (IQD)</label>
+                                <div class="d-flex gap-2">
+                                    <input type="number" id="priceRangeMin" class="form-control" 
+                                           placeholder="Min" min="250" max="50000" step="250" value="250">
+                                    <input type="number" id="priceRangeMax" class="form-control" 
+                                           placeholder="Max" min="250" max="50000" step="250" value="50000">
                                 </div>
                             </div>
+                            <div class="age-filter mb-3">
+                                <label class="form-label">Age Range</label>
+                                <div class="d-flex gap-2">
+                                    <input type="number" id="ageRangeMin" class="form-control" 
+                                           placeholder="Min" min="10" max="18" value="10">
+                                    <input type="number" id="ageRangeMax" class="form-control" 
+                                           placeholder="Max" min="10" max="18" value="18">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary w-100" onclick="applyFilters()">Apply Filters</button>
                         </div>
                     </div>
                 </div>
@@ -82,6 +91,13 @@
 
             <!-- Results Count -->
             <div id="resultsCount" class="mb-3"></div>
+
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="text-center my-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
 
             <!-- Books Container -->
             <div class="row g-4" id="booksContainer">
@@ -96,7 +112,7 @@
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="bg-dark text-white pt-5">
         <div class="container">
             <div class="row mb-4">
                 <div class="col-md-4">
@@ -106,35 +122,37 @@
                 <div class="col-md-2">
                     <h5>Quick Links</h5>
                     <ul class="list-unstyled">
-                        <li><a href="./">Home</a></li>
-                        <li><a href="books.html">Books</a></li>
-                        <li><a href="contact.html">Contact</a></li>
+                        <li><a href="./" class="text-white-50">Home</a></li>
+                        <li><a href="books.html" class="text-white-50">Books</a></li>
+                        <li><a href="contact.html" class="text-white-50">Contact</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
                     <h5>Contact Info</h5>
-                    <p><i class="fas fa-envelope me-2"></i><a href="mailto:contact@kerkukkitabevi.net">contact@kerkukkitabevi.net</a></p>
-                    <p><i class="fas fa-phone me-2"></i><a href="tel:+9647750179472">+964 775 017 9472</a></p>
+                    <p><i class="fas fa-envelope me-2"></i><a href="mailto:contact@kerkukkitabevi.net" class="text-white-50">contact@kerkukkitabevi.net</a></p>
+                    <p><i class="fas fa-phone me-2"></i><a href="tel:+9647750179472" class="text-white-50">+964 775 017 9472</a></p>
                     <p><i class="fas fa-map-marker-alt me-2"></i>123 Book Street, Literature City</p>
                 </div>
                 <div class="col-md-3">
                     <h5>Follow Us</h5>
                     <div class="social-links">
-                        <a href="https://www.instagram.com/kerkuk_kitabevi82" class="instagram">
-                            <i class="fab fa-instagram"></i>
+                        <a href="https://www.instagram.com/kerkuk_kitabevi82" class="text-white-50">
+                            <i class="fab fa-instagram fa-2x"></i>
                         </a>
                     </div>
                 </div>
             </div>
-            <div class="footer-bottom">
-                <p>&copy; 2023 Kerkuk Kitabevi. All rights reserved.</p>
+            <div class="border-top border-secondary pt-3 text-center">
+                <p class="mb-0">&copy; 2023 Kerkuk Kitabevi. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom Script -->
-    <script src="books.js"></script>
+    <!-- Your existing JavaScript code -->
+    <script>
+        // Your existing JavaScript code here
+    </script>
 </body>
 </html>
