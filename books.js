@@ -96,20 +96,27 @@ function createBookCard(book) {
     
     return `
         <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <img data-src="${photo}" 
-                     class="card-img-top lazyload" 
-                     alt="${title}" 
-                     style="height: 300px; object-fit: contain;"
-                     onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">${title}</h5>
-                    <p class="card-text text-muted">by ${author}</p>
-                    <p class="card-text mt-auto"><strong>Price: ${price}</strong></p>
-                    <button class="btn btn-primary mt-2" 
-                            onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}')">
-                        View Details <i class="fas fa-info-circle"></i>
-                    </button>
+            <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
+                <div class="position-relative" style="padding-top: 100%;">
+                    <img data-src="${photo}" 
+                         class="card-img-top lazyload position-absolute top-0 start-0 w-100 h-100 p-3" 
+                         alt="${title}" 
+                         style="object-fit: contain;"
+                         onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'">
+                </div>
+                <div class="card-body d-flex flex-column p-4">
+                    <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
+                    <p class="card-text text-muted mb-3">by ${author}</p>
+                    <div class="mt-auto">
+                        <p class="card-text mb-3">
+                            <span class="badge bg-secondary px-3 py-2">${price}</span>
+                        </p>
+                        <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" 
+                                onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}')">
+                            View Details
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -135,43 +142,79 @@ function createBookDetailsModal(book) {
         <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Book Details</h5>
+                    <div class="modal-header border-bottom-0 pb-0">
+                        <h5 class="modal-title fs-4 fw-bold">Book Details</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="row">
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
                             <!-- Left side - Photo -->
                             <div class="col-md-4">
-                                <img src="${photo}" 
-                                     class="img-fluid" 
-                                     alt="${title}"
-                                     onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'"
-                                     style="width: 100%; object-fit: contain;">
+                                <div class="position-relative rounded overflow-hidden shadow-sm" style="padding-top: 133%;">
+                                    <img src="${photo}" 
+                                         class="position-absolute top-0 start-0 w-100 h-100" 
+                                         alt="${title}"
+                                         onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'"
+                                         style="object-fit: contain;">
+                                </div>
                             </div>
                             <!-- Right side - Details -->
                             <div class="col-md-8">
-                                <h4>${title}</h4>
-                                <p class="text-muted">by ${author}</p>
+                                <h4 class="fs-3 fw-bold mb-2">${title}</h4>
+                                <p class="text-muted fs-5 mb-4">by ${author}</p>
                                 
-                                <div class="book-details mt-3">
-                                    <p><strong>ISBN 10:</strong> ${isbn10}</p>
-                                    <p><strong>ISBN 13:</strong> ${isbn13}</p>
-                                    <p><strong>Language:</strong> ${language}</p>
-                                    <p><strong>Description:</strong> ${description}</p>
-                                    <p><strong>Category:</strong> ${category}</p>
-                                    <p><strong>Age Range:</strong> ${age}</p>
-                                    <p><strong>Pages:</strong> ${papers}</p>
-                                    <p><strong>Publishing Date:</strong> ${publishingDate}</p>
-                                    <p><strong>Price:</strong> ${price}</p>
-                                    <p><strong>Status:</strong> ${status}</p>
+                                <div class="book-details">
+                                    <div class="row g-3">
+                                        <div class="col-sm-6">
+                                            <p class="mb-1"><strong>ISBN 10:</strong></p>
+                                            <p class="text-muted">${isbn10}</p>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <p class="mb-1"><strong>ISBN 13:</strong></p>
+                                            <p class="text-muted">${isbn13}</p>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <p class="mb-1"><strong>Language:</strong></p>
+                                            <p class="text-muted">${language}</p>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <p class="mb-1"><strong>Category:</strong></p>
+                                            <p class="text-muted">${category}</p>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <p class="mb-1"><strong>Age Range:</strong></p>
+                                            <p class="text-muted">${age}</p>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <p class="mb-1"><strong>Pages:</strong></p>
+                                            <p class="text-muted">${papers}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-1"><strong>Publishing Date:</strong></p>
+                                            <p class="text-muted">${publishingDate}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-1"><strong>Description:</strong></p>
+                                            <p class="text-muted">${description}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-3 mt-4">
+                                        <span class="badge ${status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary'} px-3 py-2">
+                                            ${status}
+                                        </span>
+                                        <span class="badge bg-primary px-3 py-2">
+                                            ${price}
+                                        </span>
+                                    </div>
                                     
                                     ${status.toLowerCase() === 'available' ? `
-                                        <button class="btn btn-success mt-3" 
+                                        <button class="btn btn-success w-100 mt-4 d-flex align-items-center justify-content-center gap-2" 
                                                 onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
                                             Buy Now
+                                            <i class="fas fa-shopping-cart"></i>
                                         </button>
-                                    ` : '<button class="btn btn-secondary mt-3" disabled>Sold Out</button>'}
+                                    ` : '<button class="btn btn-secondary w-100 mt-4" disabled>Sold Out</button>'}
                                 </div>
                             </div>
                         </div>
@@ -182,6 +225,28 @@ function createBookDetailsModal(book) {
     `;
 }
 
+function showBookDetails(bookJSON) {
+    const book = JSON.parse(decodeURIComponent(bookJSON));
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('bookDetailsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+    modal.show();
+}
+
+function sendPurchaseEmail(bookTitle) {
+    const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
+    const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
+    window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
+}
 function showBookDetails(bookJSON) {
     const book = JSON.parse(decodeURIComponent(bookJSON));
     
