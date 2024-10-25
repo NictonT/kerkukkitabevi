@@ -13,6 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Papa Parse -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <!-- LazySizes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js" async></script>
 </head>
@@ -46,14 +48,14 @@
     <!-- Books Section -->
     <section class="books-section py-5">
         <div class="container">
-            <!-- Search and Filters -->
+            <!-- Filters and Search -->
             <div class="row mb-4">
                 <div class="col-md-8">
                     <input type="text" class="form-control" id="searchInput" placeholder="Search books by title or author...">
                 </div>
                 <div class="col-md-4">
                     <div class="dropdown">
-                        <button class="btn btn-light border w-100 dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
+                        <button class="btn btn-light border w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">
                             Filter Options
                         </button>
                         <div class="dropdown-menu p-3 w-100">
@@ -64,7 +66,6 @@
                                     <input type="number" id="priceMax" class="form-control" placeholder="Max">
                                 </div>
                             </div>
-                            <button onclick="applyFilters()" class="btn btn-primary w-100">Apply Filters</button>
                         </div>
                     </div>
                 </div>
@@ -75,7 +76,7 @@
 
             <!-- Books Container -->
             <div class="row g-4" id="booksContainer">
-                <!-- Books will be loaded here -->
+                <!-- Books content loads here -->
             </div>
 
             <!-- Pagination -->
@@ -127,121 +128,130 @@
 
     <!-- Custom Script -->
     <script>
-        // Sample books data - Replace with your actual data
-        const books = [
-            {
-                title: "ben kirke",
-                author: "Unknown Author",
-                price: "9,750",
-                description: "No description available",
-                image: "placeholder.jpg"
-            },
-            // Add more books here
-        ];
-
         let currentPage = 1;
-        const booksPerPage = 12;
-        let filteredBooks = [...books];
+        const booksPerPage = 25;
+        let allBooks = [];
+        let filteredBooks = [];
 
-        // Initialize on page load
+        // Load books when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            displayBooks(books);
+            loadCSVFile();
             setupEventListeners();
         });
 
         function setupEventListeners() {
             const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', debounce(function() {
+            searchInput.addEventListener('input', debounce(() => {
                 applyFilters();
             }, 300));
 
-            const priceInputs = ['priceMin', 'priceMax'].map(id => document.getElementById(id));
-            priceInputs.forEach(input => {
-                input.addEventListener('input', debounce(function() {
+            document.querySelectorAll('#priceMin, #priceMax').forEach(input => {
+                input.addEventListener('input', debounce(() => {
                     applyFilters();
                 }, 300));
             });
         }
 
+        function loadCSVFile() {
+            const csvLink = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSj1Fu63OoSDb2xQxAp16xDzddkIgzb4LLRg-fcgjEKJOi0FRI70vrszirPU8UIeo3unSMHmGP8X9Ro/pub?output=csv';
+            
+            Papa.parse(csvLink, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    displayBooks(results.data);
+                    allBooks = results.data;
+                    filteredBooks = results.data;
+                },
+                error: function(error) {
+                    console.error('Error loading CSV:', error);
+                    document.getElementById('booksContainer').innerHTML = '<div class="alert alert-danger">Error loading books.</div>';
+                }
+            });
+        }
+
+        function displayBooks(books) {
+            const container = document.getElementById('booksContainer');
+            container.innerHTML = '';
+
+            const start = (currentPage - 1) * booksPerPage;
+            const end = Math.min(start + booksPerPage, books.length);
+            const booksToShow = books.slice(start, end);
+
+            booksToShow.forEach(book => {
+                if (!book['book name']) return; // Skip if no book name
+
+                const bookElement = document.createElement('div');
+                bookElement.className = 'col-md-4 mb-4';
+                bookElement.innerHTML = `
+                    <div class="card h-100">
+                        <img data-src="${book.photo || 'placeholder.jpg'}" class="card-img-top lazyload" alt="${book['book name']}">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">${book['book name']}</h5>
+                            <p class="card-text text-muted">by ${book.author || 'Unknown Author'}</p>
+                            <div class="description-container">
+                                <p class="card-text short-description">${book.description || 'No description available'}</p>
+                            </div>
+                            <p class="card-text"><strong>Price: ${book.price || 'N/A'} IQD</strong></p>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(bookElement);
+            });
+
+            updatePagination(books.length);
+            updateResultsCount(books.length);
+        }
+
         function applyFilters() {
-            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
             const priceMin = parseFloat(document.getElementById('priceMin').value) || 0;
             const priceMax = parseFloat(document.getElementById('priceMax').value) || Infinity;
 
-            filteredBooks = books.filter(book => {
-                const matchesSearch = book.title.toLowerCase().includes(searchQuery) ||
-                                   book.author.toLowerCase().includes(searchQuery);
-                
-                const price = parseFloat(book.price.replace(/,/g, '')) || 0;
-                const matchesPrice = price >= priceMin && 
-                                   (priceMax === Infinity || price <= priceMax);
+            filteredBooks = allBooks.filter(book => {
+                if (!book['book name']) return false;
+
+                const matchesSearch = book['book name'].toLowerCase().includes(searchQuery) || 
+                                   (book.author || '').toLowerCase().includes(searchQuery);
+
+                let matchesPrice = true;
+                if (book.price && book.price !== 'N/A') {
+                    const price = parseFloat(book.price.replace(/,/g, '')) || 0;
+                    matchesPrice = price >= priceMin && (priceMax === Infinity || price <= priceMax);
+                }
 
                 return matchesSearch && matchesPrice;
             });
 
             currentPage = 1;
             displayBooks(filteredBooks);
-            updateResultsCount();
         }
 
-        function displayBooks(booksToShow) {
-            const container = document.getElementById('booksContainer');
-            const start = (currentPage - 1) * booksPerPage;
-            const end = start + booksPerPage;
-            const paginatedBooks = booksToShow.slice(start, end);
-
-            container.innerHTML = '';
-
-            if (paginatedBooks.length === 0) {
-                container.innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-warning">No books found matching your criteria.</div>
-                    </div>`;
-                return;
-            }
-
-            paginatedBooks.forEach(book => {
-                const bookCard = `
-                    <div class="col-md-4 mb-4">
-                        <div class="card h-100">
-                            <img data-src="${book.image}" class="card-img-top lazyload" alt="${book.title}">
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">${book.title}</h5>
-                                <p class="card-text text-muted">by ${book.author}</p>
-                                <div class="mt-auto">
-                                    <p class="card-text mb-2">${book.description}</p>
-                                    <p class="card-text"><strong>Price: ${book.price} IQD</strong></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                container.insertAdjacentHTML('beforeend', bookCard);
-            });
-
-            updatePagination(booksToShow.length);
-        }
-
-        function updateResultsCount() {
+        function updateResultsCount(count) {
             const resultsCount = document.getElementById('resultsCount');
             resultsCount.innerHTML = `
                 <div class="alert alert-info">
-                    Found ${filteredBooks.length} book${filteredBooks.length !== 1 ? 's' : ''}
-                </div>`;
+                    Found ${count} book${count !== 1 ? 's' : ''}
+                </div>
+            `;
         }
 
         function updatePagination(totalBooks) {
             const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            
             const totalPages = Math.ceil(totalBooks / booksPerPage);
-
-            let paginationHTML = '';
+            
             for (let i = 1; i <= totalPages; i++) {
-                paginationHTML += `
-                    <li class="page-item ${i === currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
-                    </li>`;
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                li.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    changePage(i);
+                });
+                pagination.appendChild(li);
             }
-
-            pagination.innerHTML = paginationHTML;
         }
 
         function changePage(page) {
@@ -253,12 +263,8 @@
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
                 clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
+                timeout = setTimeout(() => func.apply(this, args), wait);
             };
         }
     </script>
