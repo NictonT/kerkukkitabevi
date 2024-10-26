@@ -322,13 +322,18 @@ function sendPurchaseEmail(bookTitle) {
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 
 function updateResultsCount() {
-    elements.resultsCount.innerHTML = `
-        <div class="alert alert-info">
-            Found ${state.filteredBooks.length} book${state.filteredBooks.length !== 1 ? 's' : ''}
-        </div>
-    `;
+    const searchQuery = elements.searchInput.value.trim();
+    
+    if (searchQuery) {
+        elements.resultsCount.innerHTML = `
+            <div class="alert alert-info">
+                Found ${state.filteredBooks.length} book${state.filteredBooks.length !== 1 ? 's' : ''}
+            </div>
+        `;
+    } else {
+        elements.resultsCount.innerHTML = ''; // Clear the results count when search is empty
+    }
 }
-
 function updatePagination() {
     const totalPages = Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage);
     
