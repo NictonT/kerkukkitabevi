@@ -12,10 +12,6 @@ const CONFIG = {
     paths: {
         placeholderImage: 'photos/logo/placeholder.jpg',
         bookImages: 'photos/books/'
-    },
-    urlConfig: {
-        baseUrl: '/books/',
-        defaultTitle: 'Unknown-Title'
     }
 };
 
@@ -24,7 +20,6 @@ const state = {
     currentPage: 1,
     allBooks: [],
     filteredBooks: [],
-    currentBook: null
 };
 
 // DOM Elements
@@ -43,61 +38,10 @@ const elements = {
     }
 };
 
-// URL Handling Functions
-function handleInitialUrl() {
-    const path = window.location.pathname;
-    if (path.startsWith(CONFIG.urlConfig.baseUrl)) {
-        const bookTitle = path.slice(CONFIG.urlConfig.baseUrl.length);
-        if (bookTitle) {
-            waitForBooks(() => {
-                const book = findBookByUrlTitle(decodeURIComponent(bookTitle));
-                if (book) {
-                    state.currentBook = book;
-                    showBookDetails(encodeURIComponent(JSON.stringify(book)));
-                }
-            });
-        }
-    }
-}
-
-function waitForBooks(callback) {
-    if (state.allBooks.length > 0) {
-        callback();
-    } else {
-        setTimeout(() => waitForBooks(callback), 100);
-    }
-}
-
-function findBookByUrlTitle(urlTitle) {
-    return state.allBooks.find(book => {
-        const bookUrlTitle = createUrlFriendlyTitle(book['book name'] || 'Unknown Title');
-        return bookUrlTitle === urlTitle;
-    });
-}
-
-function createUrlFriendlyTitle(title) {
-    return title.toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .trim();
-}
-
-function updateUrl(book, isShowMore = false) {
-    if (!book) {
-        window.history.pushState({}, '', CONFIG.urlConfig.baseUrl);
-        return;
-    }
-    
-    const urlTitle = createUrlFriendlyTitle(book['book name'] || 'Unknown Title');
-    const url = `${CONFIG.urlConfig.baseUrl}${urlTitle}${isShowMore ? '/details' : ''}`;
-    window.history.pushState({ bookJSON: JSON.stringify(book), isShowMore }, '', url);
-}
-
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
     loadBooks();
     setupEventListeners();
-    handleInitialUrl();
 });
 
 // Event Listeners
@@ -105,19 +49,6 @@ function setupEventListeners() {
     elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
     elements.filters.applyButton.addEventListener('click', applyFilters);
     elements.booksContainer.addEventListener('click', handleBookInteractions);
-    
-    window.addEventListener('popstate', (event) => {
-        if (event.state && event.state.bookJSON) {
-            const book = JSON.parse(event.state.bookJSON);
-            if (event.state.isShowMore) {
-                handleShowMore(book);
-            } else {
-                showBookDetails(event.state.bookJSON);
-            }
-        } else {
-            state.currentBook = null;
-        }
-    });
 }
 
 // Books Loading
@@ -131,9 +62,12 @@ function loadBooks() {
             state.allBooks = results.data
                 .filter(book => book['book name'])
                 .sort((a, b) => {
+                    // Sort by availability first (available books come first)
                     const statusA = (a.status || '').toLowerCase() === 'available';
                     const statusB = (b.status || '').toLowerCase() === 'available';
                     if (statusA !== statusB) return statusB - statusA;
+                    
+                    // Then sort by title
                     return (a['book name'] || '').localeCompare(b['book name'] || '');
                 });
             state.filteredBooks = [...state.allBooks];
@@ -166,7 +100,7 @@ function displayBooks() {
         const status = (book.status || '').toLowerCase() === 'available';
         
         if (status !== currentStatus) {
-            if (html) html += '</div>';
+            if (html) html += '</div>'; // Close previous section
             html += `
                 <div class="col-12">
                     <h4 class="mt-4 mb-3">${status ? 'Available Books' : 'Unavailable Books'}</h4>
@@ -179,20 +113,19 @@ function displayBooks() {
         html += createBookCard(book);
     });
 
-    if (html) html += '</div>';
+    if (html) html += '</div>'; // Close last section
     
     elements.booksContainer.innerHTML = html;
     updateResultsCount();
     updatePagination();
 }
-
+//verrrrrrrrry important books section
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
     const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
     const status = (book.status || '').toLowerCase();
-    const urlTitle = createUrlFriendlyTitle(title);
     
     return `
         <div class="col-md-4 mb-4">
@@ -205,13 +138,7 @@ function createBookCard(book) {
                          onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
                 </div>
                 <div class="card-body d-flex flex-column p-4">
-                    <h5 class="card-title fs-4 mb-2 text-truncate">
-                        <a href="${CONFIG.urlConfig.baseUrl}${urlTitle}" 
-                           onclick="handleBookClick(event, '${encodeURIComponent(JSON.stringify(book))}')"
-                           class="text-decoration-none text-dark">
-                            ${title}
-                        </a>
-                    </h5>
+                    <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
                     <p class="card-text text-muted mb-3">by ${author}</p>
                     <div class="mt-auto">
                         ${price ? `
@@ -219,9 +146,9 @@ function createBookCard(book) {
                                 <span class="badge bg-secondary px-3 py-2">${price}</span>
                             </p>
                         ` : ''}
-                        <a href="${CONFIG.urlConfig.baseUrl}${urlTitle}"
-                           class="btn btn-outline-primary mt-auto w-100"
-                           onclick="handleBookClick(event, '${encodeURIComponent(JSON.stringify(book))}')">
+                        <a href="#" 
+                           class="btn btn-outline-primary mt-auto w-100" 
+                           onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
                         </a>
@@ -230,14 +157,6 @@ function createBookCard(book) {
             </div>
         </div>
     `;
-}
-
-function handleBookClick(event, bookJSON) {
-    event.preventDefault();
-    const book = JSON.parse(decodeURIComponent(bookJSON));
-    state.currentBook = book;
-    updateUrl(book);
-    showBookDetails(bookJSON);
 }
 
 function createBookDetailsModal(book) {
@@ -299,16 +218,9 @@ function createBookDetailsModal(book) {
                                 <p class="text-muted mb-4">by ${author}</p>
                                 
                                 ${details.description ? `
-                                    <div class="mb-4 description-container">
+                                    <div class="mb-4">
                                         <h6 class="fw-bold mb-2">Description</h6>
-                                        <p class="text-muted short-description">${details.description.substring(0, 150)}${details.description.length > 150 ? '...' : ''}</p>
-                                        <p class="text-muted full-description d-none">${details.description}</p>
-                                        ${details.description.length > 150 ? `
-                                            <button class="btn btn-link show-more-btn p-0"
-                                                    data-book='${encodeURIComponent(JSON.stringify(book))}'>
-                                                Show More
-                                            </button>
-                                        ` : ''}
+                                        <p class="text-muted">${details.description}</p>
                                     </div>
                                 ` : ''}
 
@@ -335,7 +247,6 @@ function createBookDetailsModal(book) {
         </div>
     `;
 }
-
 // Helper functions
 function renderDetailsColumn(details) {
     return details
@@ -367,66 +278,12 @@ function renderStatusAndPrice(status, price) {
     `;
 }
 
-function showBookDetails(bookJSON) {
-    try {
-        const book = JSON.parse(decodeURIComponent(bookJSON));
-        
-        const existingModal = document.getElementById('bookDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
-        
-        const modalElement = document.getElementById('bookDetailsModal');
-        modalElement.addEventListener('hidden.bs.modal', () => {
-            updateUrl(null);
-            state.currentBook = null;
-        });
-        
-        modal.show();
-    } catch (error) {
-        console.error('Error showing book details:', error);
-    }
-}
-
-// Handle Show More/Less
-function handleBookInteractions(event) {
-    if (event.target.classList.contains('show-more-btn')) {
-        event.preventDefault();
-        const button = event.target;
-        const container = button.closest('.description-container');
-        const shortDesc = container.querySelector('.short-description');
-        const fullDesc = container.querySelector('.full-description');
-        const bookData = JSON.parse(decodeURIComponent(button.dataset.book));
-        
-        if (fullDesc.classList.contains('d-none')) {
-            fullDesc.classList.remove('d-none');
-            shortDesc.classList.add('d-none');
-            button.textContent = 'Show Less';
-            updateUrl(bookData, true);
-        } else {
-            fullDesc.classList.add('d-none');
-            shortDesc.classList.remove('d-none');
-            button.textContent = 'Show More';
-            updateUrl(bookData, false);
-        }
-    }
-}
-
-function sendPurchaseEmail(bookTitle) {
-    const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
-    const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
-    window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
-}
-
-// Filter and search functions
+// filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
     if (!searchQuery) {
-        state.filteredBooks = [...state.allBooks];
+        state.filteredBooks = [...state.allBooks]; // allBooks is already sorted by availability
     } else {
         state.filteredBooks = state.allBooks.filter(book => {
             return book['book name']?.toLowerCase().includes(searchQuery) ||
@@ -440,6 +297,30 @@ function applyFilters() {
     displayBooks();
 }
 
+function showBookDetails(bookJSON) {
+    try {
+        const book = JSON.parse(decodeURIComponent(bookJSON));
+        
+        const existingModal = document.getElementById('bookDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error showing book details:', error);
+    }
+}
+
+function sendPurchaseEmail(bookTitle) {
+    const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
+    const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
+    window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+
 function updateResultsCount() {
     const searchQuery = elements.searchInput.value.trim();
     
@@ -450,10 +331,9 @@ function updateResultsCount() {
             </div>
         `;
     } else {
-        elements.resultsCount.innerHTML = '';
+        elements.resultsCount.innerHTML = ''; // Clear the results count when search is empty
     }
 }
-
 function updatePagination() {
     const totalPages = Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage);
     
@@ -502,6 +382,27 @@ function showLoading(show) {
     elements.loadingIndicator.style.display = show ? 'block' : 'none';
 }
 
+// Event handling
+function handleBookInteractions(event) {
+    if (event.target.classList.contains('show-more-btn')) {
+        event.preventDefault();
+        const button = event.target;
+        const container = button.closest('.description-container');
+        const shortDesc = container.querySelector('.short-description');
+        const fullDesc = container.querySelector('.full-description');
+        
+        if (fullDesc.classList.contains('d-none')) {
+            fullDesc.classList.remove('d-none');
+            shortDesc.classList.add('d-none');
+            button.textContent = 'Show Less';
+        } else {
+            fullDesc.classList.add('d-none');
+            shortDesc.classList.remove('d-none');
+            button.textContent = 'Show More';
+        }
+    }
+}
+
 // Utility functions
 function debounce(func, wait) {
     let timeout;
@@ -509,51 +410,6 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
-}
-
-// Filter Functions
-function applyPriceFilter(books) {
-    const minPrice = Number(elements.filters.priceMin.value) || CONFIG.defaultFilters.price.min;
-    const maxPrice = Number(elements.filters.priceMax.value) || CONFIG.defaultFilters.price.max;
-
-    return books.filter(book => {
-        const price = Number(book.price?.replace(/[^\d.-]/g, '')) || 0;
-        return price >= minPrice && price <= maxPrice;
-    });
-}
-
-function applyAgeFilter(books) {
-    const minAge = Number(elements.filters.ageMin.value) || CONFIG.defaultFilters.age.min;
-    const maxAge = Number(elements.filters.ageMax.value) || CONFIG.defaultFilters.age.max;
-
-    return books.filter(book => {
-        const age = Number(book.age?.replace(/[^\d.-]/g, '')) || 0;
-        return age >= minAge && age <= maxAge;
-    });
-}
-
-// Initialize Ranges
-function initializePriceRanges() {
-    if (elements.filters.priceMin && elements.filters.priceMax) {
-        elements.filters.priceMin.value = CONFIG.defaultFilters.price.min;
-        elements.filters.priceMax.value = CONFIG.defaultFilters.price.max;
-    }
-}
-
-function initializeAgeRanges() {
-    if (elements.filters.ageMin && elements.filters.ageMax) {
-        elements.filters.ageMin.value = CONFIG.defaultFilters.age.min;
-        elements.filters.ageMax.value = CONFIG.defaultFilters.age.max;
-    }
-}
-
-function resetFilters() {
-    elements.searchInput.value = '';
-    initializePriceRanges();
-    initializeAgeRanges();
-    state.filteredBooks = [...state.allBooks];
-    state.currentPage = 1;
-    displayBooks();
 }
 
 // Validation
@@ -576,7 +432,60 @@ function validateElements() {
     }
 }
 
-// Keyboard navigation
+// Initialize Price Range Inputs
+function initializePriceRanges() {
+    if (elements.filters.priceMin && elements.filters.priceMax) {
+        elements.filters.priceMin.value = CONFIG.defaultFilters.price.min;
+        elements.filters.priceMax.value = CONFIG.defaultFilters.price.max;
+    }
+}
+
+// Initialize Age Range Inputs
+function initializeAgeRanges() {
+    if (elements.filters.ageMin && elements.filters.ageMax) {
+        elements.filters.ageMin.value = CONFIG.defaultFilters.age.min;
+        elements.filters.ageMax.value = CONFIG.defaultFilters.age.max;
+    }
+}
+
+// Reset Filters
+function resetFilters() {
+    elements.searchInput.value = '';
+    initializePriceRanges();
+    initializeAgeRanges();
+    state.filteredBooks = [...state.allBooks];
+    state.currentPage = 1;
+    displayBooks();
+}
+
+// Enhanced Filter Functions
+function applyPriceFilter(books) {
+    const minPrice = Number(elements.filters.priceMin.value) || CONFIG.defaultFilters.price.min;
+    const maxPrice = Number(elements.filters.priceMax.value) || CONFIG.defaultFilters.price.max;
+
+    return books.filter(book => {
+        const price = Number(book.price?.replace(/[^\d.-]/g, '')) || 0;
+        return price >= minPrice && price <= maxPrice;
+    });
+}
+
+function applyAgeFilter(books) {
+    const minAge = Number(elements.filters.ageMin.value) || CONFIG.defaultFilters.age.min;
+    const maxAge = Number(elements.filters.ageMax.value) || CONFIG.defaultFilters.age.max;
+
+    return books.filter(book => {
+        const age = Number(book.age?.replace(/[^\d.-]/g, '')) || 0;
+        return age >= minAge && age <= maxAge;
+    });
+}
+
+// Image error handling
+function handleImageError(img) {
+    img.onerror = null;
+    img.src = CONFIG.paths.placeholderImage;
+}
+
+// Optional: Add keyboard navigation for pagination
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' && state.currentPage > 1) {
         changePage(state.currentPage - 1);
@@ -585,7 +494,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Initialize on page load
+// Additional initialization on page load
 document.addEventListener('DOMContentLoaded', () => {
     try {
         validateElements();
@@ -593,7 +502,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         initializePriceRanges();
         initializeAgeRanges();
-        handleInitialUrl();
     } catch (error) {
         console.error('Initialization error:', error);
         showError('Failed to initialize the application. Please refresh the page or contact support.');
