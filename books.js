@@ -326,15 +326,17 @@ function applyFilters() {
         });
     }
 
-    // Update display
+    // Display books
     if (state.filteredBooks && state.filteredBooks.length > 0) {
         const start = (state.currentPage - 1) * CONFIG.booksPerPage;
         const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
         const booksToShow = state.filteredBooks.slice(start, end);
 
+        // Use the original createBookCard function to maintain styling
         elements.booksContainer.innerHTML = booksToShow
             .map(book => createBookCard(book))
             .join('');
+
     } else {
         elements.booksContainer.innerHTML = `
             <div class="col-12">
