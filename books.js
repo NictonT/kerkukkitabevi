@@ -119,6 +119,7 @@ function displayBooks() {
     updateResultsCount();
     updatePagination();
 }
+
 //verrrrrrrrry important books section
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
@@ -247,6 +248,7 @@ function createBookDetailsModal(book) {
         </div>
     `;
 }
+
 // Helper functions
 function renderDetailsColumn(details) {
     return details
@@ -283,7 +285,7 @@ function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
     if (!searchQuery) {
-        state.filteredBooks = [...state.allBooks]; // allBooks is already sorted by availability
+        state.filteredBooks = [...state.allBooks];
     } else {
         state.filteredBooks = state.allBooks.filter(book => {
             return book['book name']?.toLowerCase().includes(searchQuery) ||
@@ -319,7 +321,6 @@ function sendPurchaseEmail(bookTitle) {
     const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
-//-------------------------------------------------------------------------------------------------------------------------------------------------------
 
 function updateResultsCount() {
     const searchQuery = elements.searchInput.value.trim();
@@ -331,9 +332,10 @@ function updateResultsCount() {
             </div>
         `;
     } else {
-        elements.resultsCount.innerHTML = ''; // Clear the results count when search is empty
+        elements.resultsCount.innerHTML = '';
     }
 }
+
 function updatePagination() {
     const totalPages = Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage);
     
