@@ -95,12 +95,14 @@ function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    const photo = getPhotoPath(book['photo']);
+    
+    // Simplify photo handling - use the exact path from the data
+    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
     
     return `
         <div class="col-md-4 mb-4">
-            <div class="card h-100 shadow hover:shadow-lg transition-all duration-300">
-                <div class="position-relative" style="padding-top: 133%;">
+            <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
+                <div class="position-relative" style="padding-top: 100%;">
                     <img src="${photo}" 
                          class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
                          alt="${title}" 
@@ -112,12 +114,12 @@ function createBookCard(book) {
                     <p class="card-text text-muted mb-3">by ${author}</p>
                     <div class="mt-auto">
                         ${price ? `
-                            <div class="d-flex justify-content-center mb-3">
-                                <span class="badge bg-primary px-3 py-2">${price}</span>
-                            </div>
+                            <p class="card-text mb-3">
+                                <span class="badge bg-secondary px-3 py-2">${price}</span>
+                            </p>
                         ` : ''}
                         <a href="#" 
-                           class="btn btn-outline-primary w-100" 
+                           class="btn btn-outline-primary mt-auto w-100" 
                            onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
@@ -132,7 +134,10 @@ function createBookCard(book) {
 function createBookDetailsModal(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
-    const photo = getPhotoPath(book['photo']);
+    const price = book['price'] ? `${book['price']} IQD` : null;
+    
+    //photo card
+    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
 
     // Extract all possible book details
     const details = {
