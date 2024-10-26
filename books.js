@@ -167,13 +167,13 @@ function displayBooks() {
     updatePagination();
 }
 
-//verrrrrrrrry important books section
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
     const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
     const status = (book.status || '').toLowerCase();
+    const urlTitle = createUrlFriendlyTitle(title);
     
     return `
         <div class="col-md-4 mb-4">
@@ -186,7 +186,13 @@ function createBookCard(book) {
                          onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
                 </div>
                 <div class="card-body d-flex flex-column p-4">
-                    <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
+                    <h5 class="card-title fs-4 mb-2 text-truncate">
+                        <a href="${CONFIG.urlConfig.baseUrl}${urlTitle}" 
+                           onclick="handleBookClick(event, '${encodeURIComponent(JSON.stringify(book))}')"
+                           class="text-decoration-none text-dark">
+                            ${title}
+                        </a>
+                    </h5>
                     <p class="card-text text-muted mb-3">by ${author}</p>
                     <div class="mt-auto">
                         ${price ? `
@@ -194,9 +200,9 @@ function createBookCard(book) {
                                 <span class="badge bg-secondary px-3 py-2">${price}</span>
                             </p>
                         ` : ''}
-                        <a href="#" 
-                           class="btn btn-outline-primary mt-auto w-100" 
-                           onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
+                        <a href="${CONFIG.urlConfig.baseUrl}${urlTitle}"
+                           class="btn btn-outline-primary mt-auto w-100"
+                           onclick="handleBookClick(event, '${encodeURIComponent(JSON.stringify(book))}')">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
                         </a>
@@ -205,6 +211,18 @@ function createBookCard(book) {
             </div>
         </div>
     `;
+}
+
+function handleBookClick(event, bookJSON) {
+    event.preventDefault();
+    const book = JSON.parse(decodeURIComponent(bookJSON));
+    const urlTitle = createUrlFriendlyTitle(book['book name'] || 'Unknown Title');
+    window.history.pushState(
+        { bookJSON: bookJSON },
+        '',
+        `${CONFIG.urlConfig.baseUrl}${urlTitle}`
+    );
+    showBookDetails(bookJSON);
 }
 
 function createBookDetailsModal(book) {
@@ -295,7 +313,6 @@ function createBookDetailsModal(book) {
         </div>
     `;
 }
-
 // Helper functions
 function renderDetailsColumn(details) {
     return details
@@ -327,7 +344,37 @@ function renderStatusAndPrice(status, price) {
     `;
 }
 
-// filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+function showBookDetails(bookJSON) {
+    try {
+        const book = JSON.parse(decodeURIComponent(bookJSON));
+        
+        const existingModal = document.getElementById('bookDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+        
+        // Handle modal close
+        const modalElement = document.getElementById('bookDetailsModal');
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            window.history.pushState({}, '', CONFIG.urlConfig.baseUrl);
+        });
+        
+        modal.show();
+    } catch (error) {
+        console.error('Error showing book details:', error);
+    }
+}
+
+function sendPurchaseEmail(bookTitle) {
+    const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
+    const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
+    window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
+}
+
+// filter and search functions
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
@@ -344,29 +391,6 @@ function applyFilters() {
 
     state.currentPage = 1;
     displayBooks();
-}
-
-function showBookDetails(bookJSON) {
-    try {
-        const book = JSON.parse(decodeURIComponent(bookJSON));
-        
-        const existingModal = document.getElementById('bookDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error showing book details:', error);
-    }
-}
-
-function sendPurchaseEmail(bookTitle) {
-    const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
-    const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
-    window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
 
 function updateResultsCount() {
@@ -401,6 +425,7 @@ function updatePagination() {
     });
 }
 
+// UI State Functions
 function showNoResults() {
     elements.booksContainer.innerHTML = `
         <div class="col-12">
@@ -461,53 +486,7 @@ function debounce(func, wait) {
     };
 }
 
-// Validation
-function validateElements() {
-    const missingElements = [];
-    for (const [key, element] of Object.entries(elements)) {
-        if (typeof element === 'object' && element !== null) {
-            for (const [nestedKey, nestedElement] of Object.entries(element)) {
-                if (!nestedElement) {
-                    missingElements.push(`${key}.${nestedKey}`);
-                }
-            }
-        } else if (!element) {
-            missingElements.push(key);
-        }
-    }
-
-    if (missingElements.length > 0) {
-        throw new Error(`Required DOM elements missing: ${missingElements.join(', ')}`);
-    }
-}
-
-// Initialize Price Range Inputs
-function initializePriceRanges() {
-    if (elements.filters.priceMin && elements.filters.priceMax) {
-        elements.filters.priceMin.value = CONFIG.defaultFilters.price.min;
-        elements.filters.priceMax.value = CONFIG.defaultFilters.price.max;
-    }
-}
-
-// Initialize Age Range Inputs
-function initializeAgeRanges() {
-    if (elements.filters.ageMin && elements.filters.ageMax) {
-        elements.filters.ageMin.value = CONFIG.defaultFilters.age.min;
-        elements.filters.ageMax.value = CONFIG.defaultFilters.age.max;
-    }
-}
-
-// Reset Filters
-function resetFilters() {
-    elements.searchInput.value = '';
-    initializePriceRanges();
-    initializeAgeRanges();
-    state.filteredBooks = [...state.allBooks];
-    state.currentPage = 1;
-    displayBooks();
-}
-
-// Enhanced Filter Functions
+// Filter Functions
 function applyPriceFilter(books) {
     const minPrice = Number(elements.filters.priceMin.value) || CONFIG.defaultFilters.price.min;
     const maxPrice = Number(elements.filters.priceMax.value) || CONFIG.defaultFilters.price.max;
@@ -528,13 +507,52 @@ function applyAgeFilter(books) {
     });
 }
 
-// Image error handling
-function handleImageError(img) {
-    img.onerror = null;
-    img.src = CONFIG.paths.placeholderImage;
+// Initialize Age and Price Ranges
+function initializePriceRanges() {
+    if (elements.filters.priceMin && elements.filters.priceMax) {
+        elements.filters.priceMin.value = CONFIG.defaultFilters.price.min;
+        elements.filters.priceMax.value = CONFIG.defaultFilters.price.max;
+    }
 }
 
-// Optional: Add keyboard navigation for pagination
+function initializeAgeRanges() {
+    if (elements.filters.ageMin && elements.filters.ageMax) {
+        elements.filters.ageMin.value = CONFIG.defaultFilters.age.min;
+        elements.filters.ageMax.value = CONFIG.defaultFilters.age.max;
+    }
+}
+
+// Reset Filters
+function resetFilters() {
+    elements.searchInput.value = '';
+    initializePriceRanges();
+    initializeAgeRanges();
+    state.filteredBooks = [...state.allBooks];
+    state.currentPage = 1;
+    displayBooks();
+}
+
+// Validation
+function validateElements() {
+    const missingElements = [];
+    for (const [key, element] of Object.entries(elements)) {
+        if (typeof element === 'object' && element !== null) {
+            for (const [nestedKey, nestedElement] of Object.entries(element)) {
+                if (!nestedElement) {
+                    missingElements.push(`${key}.${nestedKey}`);
+                }
+            }
+        } else if (!element) {
+            missingElements.push(key);
+        }
+    }
+
+    if (missingElements.length > 0) {
+        throw new Error(`Required DOM elements missing: ${missingElements.join(', ')}`);
+    }
+}
+
+// Keyboard navigation
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' && state.currentPage > 1) {
         changePage(state.currentPage - 1);
@@ -543,7 +561,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Additional initialization on page load
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     try {
         validateElements();
