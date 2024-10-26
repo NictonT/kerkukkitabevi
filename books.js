@@ -313,73 +313,41 @@ function sendPurchaseEmail(bookTitle) {
 // filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
-    console.log('Search Query:', searchQuery);
 
     // Filter books
     if (!searchQuery) {
-        // If no search, show all books
         state.filteredBooks = [...state.allBooks];
     } else {
-        // Filter based on search
         state.filteredBooks = state.allBooks.filter(book => {
             return book['book name']?.toLowerCase().includes(searchQuery) ||
-                   book['author']?.toLowerCase().includes(searchQuery);
+                   book['author']?.toLowerCase().includes(searchQuery) ||
+                   (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
+                   (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
         });
     }
 
-    console.log('Found books:', state.filteredBooks); // Debug log entire books array
-
-    // Direct display update
+    // Update display
     if (state.filteredBooks && state.filteredBooks.length > 0) {
-        try {
-            const booksHTML = state.filteredBooks.map(book => {
-                console.log('Processing book:', book); // Debug log each book
-                return `
-                    <div class="col-md-4 mb-4">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">${book['book name'] || 'Unknown Title'}</h5>
-                                <p class="card-text">by ${book['author'] || 'Unknown Author'}</p>
-                                ${book['price'] ? `<p class="card-text">Price: ${book['price']} IQD</p>` : ''}
-                                <button class="btn btn-primary" onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}')">
-                                    View Details
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+        const start = (state.currentPage - 1) * CONFIG.booksPerPage;
+        const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
+        const booksToShow = state.filteredBooks.slice(start, end);
 
-            console.log('Generated HTML length:', booksHTML.length); // Debug log HTML
-            elements.booksContainer.innerHTML = booksHTML;
-            console.log('Display updated'); // Debug log display update
-
-        } catch (error) {
-            console.error('Error in display:', error); // Debug log errors
-            elements.booksContainer.innerHTML = `
-                <div class="col-12">
-                    <div class="alert alert-danger">
-                        Error displaying books: ${error.message}
-                    </div>
-                </div>
-            `;
-        }
+        elements.booksContainer.innerHTML = booksToShow
+            .map(book => createBookCard(book))
+            .join('');
     } else {
         elements.booksContainer.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-warning">
-                    No books found matching "${searchQuery}"
+                    No books found matching your search. Try a different term.
                 </div>
             </div>
         `;
     }
 
-    // Update count
-    elements.resultsCount.innerHTML = `
-        <div class="alert alert-info">
-            Found ${state.filteredBooks.length} book${state.filteredBooks.length !== 1 ? 's' : ''}
-        </div>
-    `;
+    // Update UI elements
+    updateResultsCount();
+    updatePagination();
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 
