@@ -310,61 +310,58 @@ function sendPurchaseEmail(bookTitle) {
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
 
-// filter icon-----------------------------
+// filter icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
-    
-    // Parse price values handling both comma and dot formats
-    const parsePrice = (value) => {
-        if (!value || value.toLowerCase() === 'all') return 0;
-        return parseInt(value.toString().replace(/[,.]/g, '')) || 0;
+
+    const parseNumber = (value) => {
+        if (!value) return 0;
+        if (typeof value === 'string' && value.toLowerCase() === 'all') return Infinity;
+        return parseInt(value.toString().replace(/[\s,\.]/g, '')) || 0;
     };
 
-    // Parse age values handling "all" option
-    const parseAge = (value) => {
-        if (!value || value.toLowerCase() === 'all') return value.toLowerCase() === 'all' ? Infinity : 0;
-        return parseInt(value) || 0;
-    };
-
+    // Build filters object
     const filters = {
         age: {
-            min: parseAge(elements.filters.ageMin.value),
-            max: parseAge(elements.filters.ageMax.value)
+            min: elements.filters.ageMin.value.toLowerCase() === 'all' ? 0 : parseNumber(elements.filters.ageMin.value),
+            max: elements.filters.ageMax.value.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.ageMax.value)
         },
         price: {
-            min: parsePrice(elements.filters.priceMin.value),
-            max: parsePrice(elements.filters.priceMax.value) || Infinity
+            min: parseNumber(elements.filters.priceMin.value),
+            max: elements.filters.priceMax.value.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.priceMax.value)
         }
     };
 
+    // Filter
     state.filteredBooks = state.allBooks.filter(book => {
         if (!book['book name']) return false;
 
-        // Search matching
+        // Search
         const matchesSearch = !searchQuery || 
             book['book name'].toLowerCase().includes(searchQuery) ||
             (book['author'] || '').toLowerCase().includes(searchQuery) ||
-            (book['ISBN 10'] || '').toLowerCase().includes(searchQuery) ||
-            (book['ISBN 13'] || '').toLowerCase().includes(searchQuery);
+            (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
+            (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
 
-        // Parse book values
-        const bookAge = book['age']?.toLowerCase() === 'all' ? 0 : parseInt(book['age']) || 0;
-        const bookPrice = parsePrice(book['price']);
+        // book values
+        const bookAge = book['age']?.toString().toLowerCase() === 'all' ? 
+            0 : parseNumber(book['age']);
+        const bookPrice = parseNumber(book['price']);
 
-        // Check filters
+        // Age
         const matchesAge = bookAge >= filters.age.min && 
-                          (filters.age.max === Infinity || bookAge <= filters.age.max);
-        
+            (filters.age.max === Infinity || bookAge <= filters.age.max);
+
+        // Price
         const matchesPrice = bookPrice >= filters.price.min && 
-                            (filters.price.max === Infinity || bookPrice <= filters.price.max);
+            (filters.price.max === Infinity || bookPrice <= filters.price.max);
 
         return matchesSearch && matchesAge && matchesPrice;
     });
-
+    
     state.currentPage = 1;
     displayBooks();
 }
-
 // UI Update Functions
 function updateResultsCount() {
     elements.resultsCount.innerHTML = `
