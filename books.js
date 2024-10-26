@@ -95,22 +95,12 @@ function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    
-    // Handle photo path
-    let photo = 'photos/logo/placeholder.jpg'; // default placeholder
-    if (book['photo']) {
-        // If the photo value doesn't include the full path, add it
-        if (!book['photo'].includes('photos/logo/')) {
-            photo = `photos/logo/book photos/${book['photo']}`;
-        } else {
-            photo = book['photo'];
-        }
-    }
+    const photo = getPhotoPath(book['photo']);
     
     return `
         <div class="col-md-4 mb-4">
-            <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
-                <div class="position-relative" style="padding-top: 100%;">
+            <div class="card h-100 shadow hover:shadow-lg transition-all duration-300">
+                <div class="position-relative" style="padding-top: 133%;">
                     <img src="${photo}" 
                          class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
                          alt="${title}" 
@@ -122,12 +112,12 @@ function createBookCard(book) {
                     <p class="card-text text-muted mb-3">by ${author}</p>
                     <div class="mt-auto">
                         ${price ? `
-                            <p class="card-text mb-3">
-                                <span class="badge bg-secondary px-3 py-2">${price}</span>
-                            </p>
+                            <div class="d-flex justify-content-center mb-3">
+                                <span class="badge bg-primary px-3 py-2">${price}</span>
+                            </div>
                         ` : ''}
                         <a href="#" 
-                           class="btn btn-outline-primary mt-auto w-100" 
+                           class="btn btn-outline-primary w-100" 
                            onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
@@ -142,80 +132,84 @@ function createBookCard(book) {
 function createBookDetailsModal(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
-    const price = book['price'] ? `${book['price']} IQD` : null;
-    
-    // Handle photo path
-    let photo = 'photos/logo/placeholder.jpg'; // default placeholder
-    if (book['photo']) {
-        // If the photo value doesn't include the full path, add it
-        if (!book['photo'].includes('photos/logo/')) {
-            photo = `photos/logo/book photos/${book['photo']}`;
-        } else {
-            photo = book['photo'];
-        }
-    }
+    const photo = getPhotoPath(book['photo']);
 
-    const description = book['description'] || null;
-    const isbn10 = book['ISBN 10'] || book['isbn10'] || null;
-    const isbn13 = book['ISBN 13'] || book['isbn13'] || null;
-    const language = book['language'] || null;
-    const category = book['category'] || null;
-    const age = book['age'] || null;
-    const papers = book['papers'] || null;
-    const publishingDate = book['publishing_date'] || book['publishing date'] || null;
-    const status = book['status'] || null;
-
-    // Create details list (only showing non-null values)
-    const createDetailItem = (label, value) => {
-        if (!value) return '';
-        return `
-            <div class="mb-3">
-                <strong class="d-block text-dark mb-1">${label}:</strong>
-                <span class="text-muted">${value}</span>
-            </div>
-        `;
+    // Extract all possible book details
+    const details = {
+        price: book['price'] ? `${book['price']} IQD` : null,
+        language: book['language'],
+        category: book['category'],
+        age: book['age'],
+        papers: book['papers'],
+        isbn10: book['ISBN 10'] || book['isbn10'],
+        isbn13: book['ISBN 13'] || book['isbn13'],
+        publishingDate: book['publishing_date'] || book['publishing date'],
+        description: book['description'],
+        status: book['status']
     };
+
+    // Group details into columns
+    const leftColumnDetails = [
+        { label: 'Language', value: details.language },
+        { label: 'Category', value: details.category },
+        { label: 'Age Range', value: details.age },
+        { label: 'Pages', value: details.papers }
+    ];
+
+    const rightColumnDetails = [
+        { label: 'ISBN 10', value: details.isbn10 },
+        { label: 'ISBN 13', value: details.isbn13 },
+        { label: 'Publishing Date', value: details.publishingDate }
+    ];
 
     return `
         <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Book Details</h5>
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title fs-4">Book Details</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="row">
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
                             <div class="col-md-4">
-                                <img src="${photo}" 
-                                     class="img-fluid" 
-                                     alt="${title}"
-                                     onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'"
-                                     style="width: 100%; object-fit: contain;">
+                                <div class="text-center">
+                                    <div class="position-relative rounded shadow-sm mb-4" style="padding-top: 133%;">
+                                        <img src="${photo}" 
+                                             class="position-absolute top-0 start-0 w-100 h-100" 
+                                             alt="${title}"
+                                             onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'"
+                                             style="object-fit: contain;">
+                                    </div>
+                                    ${renderStatusAndPrice(details.status, details.price)}
+                                </div>
                             </div>
                             <div class="col-md-8">
-                                <h4>${title}</h4>
-                                <p class="text-muted">by ${author}</p>
+                                <h4 class="fs-3 mb-2">${title}</h4>
+                                <p class="text-muted mb-4">by ${author}</p>
                                 
-                                <div class="book-details mt-3">
-                                    ${createDetailItem('Language', language)}
-                                    ${createDetailItem('Pages', papers)}
-                                    ${createDetailItem('Age Range', age)}
-                                    ${createDetailItem('Category', category)}
-                                    ${createDetailItem('ISBN 10', isbn10)}
-                                    ${createDetailItem('ISBN 13', isbn13)}
-                                    ${createDetailItem('Publishing Date', publishingDate)}
-                                    ${createDetailItem('Description', description)}
-                                    ${createDetailItem('Price', price)}
-                                    ${createDetailItem('Status', status)}
-                                    
-                                    ${status?.toLowerCase() === 'available' ? `
-                                        <button class="btn btn-success mt-3" 
-                                                onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
-                                            Buy Now
-                                        </button>
-                                    ` : '<button class="btn btn-secondary mt-3" disabled>Sold Out</button>'}
+                                ${details.description ? `
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold mb-2">Description</h6>
+                                        <p class="text-muted">${details.description}</p>
+                                    </div>
+                                ` : ''}
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        ${renderDetailsColumn(leftColumnDetails)}
+                                    </div>
+                                    <div class="col-md-6">
+                                        ${renderDetailsColumn(rightColumnDetails)}
+                                    </div>
                                 </div>
+
+                                ${details.status?.toLowerCase() === 'available' ? `
+                                    <button class="btn btn-success w-100 mt-4" 
+                                            onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
+                                        <i class="fas fa-shopping-cart me-2"></i>Buy Now
+                                    </button>
+                                ` : '<button class="btn btn-secondary w-100 mt-4" disabled>Sold Out</button>'}
                             </div>
                         </div>
                     </div>
@@ -225,21 +219,61 @@ function createBookDetailsModal(book) {
     `;
 }
 
+// Helper functions
+function getPhotoPath(photoValue) {
+    if (!photoValue) return 'photos/logo/placeholder.jpg';
+    return photoValue.includes('/') ? photoValue : `photos/logo/book photos/${photoValue}`;
+}
+
+function renderDetailsColumn(details) {
+    return details
+        .filter(detail => detail.value)
+        .map(detail => `
+            <div class="mb-3">
+                <strong class="d-block text-dark mb-1">${detail.label}:</strong>
+                <span class="text-muted">${detail.value}</span>
+            </div>
+        `).join('');
+}
+
+function renderStatusAndPrice(status, price) {
+    if (!status && !price) return '';
+    
+    return `
+        <div class="d-flex justify-content-center gap-2 flex-wrap">
+            ${status ? `
+                <span class="badge ${status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary'} px-3 py-2">
+                    ${status}
+                </span>
+            ` : ''}
+            ${price ? `
+                <span class="badge bg-primary px-3 py-2">
+                    ${price}
+                </span>
+            ` : ''}
+        </div>
+    `;
+}
+
 function showBookDetails(bookJSON) {
-    const book = JSON.parse(decodeURIComponent(bookJSON));
-    
-    // Remove existing modal if any
-    const existingModal = document.getElementById('bookDetailsModal');
-    if (existingModal) {
-        existingModal.remove();
+    try {
+        const book = JSON.parse(decodeURIComponent(bookJSON));
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('bookDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error showing book details:', error);
     }
-    
-    // Add new modal to body
-    document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-    
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
-    modal.show();
 }
 
 function sendPurchaseEmail(bookTitle) {
