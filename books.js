@@ -12,6 +12,10 @@ const CONFIG = {
     paths: {
         placeholderImage: 'photos/logo/placeholder.jpg',
         bookImages: 'photos/books/'
+    },
+    urlConfig: {
+        baseUrl: '/books/',
+        defaultTitle: 'Unknown-Title'
     }
 };
 
@@ -42,13 +46,57 @@ const elements = {
 document.addEventListener('DOMContentLoaded', () => {
     loadBooks();
     setupEventListeners();
+    handleInitialUrl();
 });
+
+// URL Handling Functions
+function handleInitialUrl() {
+    const path = window.location.pathname;
+    if (path.startsWith(CONFIG.urlConfig.baseUrl)) {
+        const bookTitle = path.slice(CONFIG.urlConfig.baseUrl.length);
+        if (bookTitle) {
+            waitForBooks(() => {
+                const book = findBookByUrlTitle(decodeURIComponent(bookTitle));
+                if (book) {
+                    showBookDetails(encodeURIComponent(JSON.stringify(book)));
+                }
+            });
+        }
+    }
+}
+
+function waitForBooks(callback) {
+    if (state.allBooks.length > 0) {
+        callback();
+    } else {
+        setTimeout(() => waitForBooks(callback), 100);
+    }
+}
+
+function findBookByUrlTitle(urlTitle) {
+    return state.allBooks.find(book => {
+        const bookUrlTitle = createUrlFriendlyTitle(book['book name'] || 'Unknown Title');
+        return bookUrlTitle === urlTitle;
+    });
+}
+
+function createUrlFriendlyTitle(title) {
+    return title.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .trim();
+}
 
 // Event Listeners
 function setupEventListeners() {
     elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
     elements.filters.applyButton.addEventListener('click', applyFilters);
     elements.booksContainer.addEventListener('click', handleBookInteractions);
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.bookJSON) {
+            showBookDetails(event.state.bookJSON);
+        }
+    });
 }
 
 // Books Loading
@@ -81,7 +129,6 @@ function loadBooks() {
         }
     });
 }
-
 // Display Functions
 function displayBooks() {
     if (state.filteredBooks.length === 0) {
