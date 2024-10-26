@@ -313,44 +313,101 @@ function sendPurchaseEmail(bookTitle) {
 // filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
+    console.log('Search Query:', searchQuery);
 
-    // Filter books based on search
-    state.filteredBooks = state.allBooks.filter(book => {
-        // Skip invalid books
-        if (!book['book name']) return false;
-
-        // If no search query, include all books
-        if (!searchQuery) return true;
-
-        // Check search matches
-        return book['book name'].toLowerCase().includes(searchQuery) ||
-               (book['author'] || '').toLowerCase().includes(searchQuery) ||
-               (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
-               (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
-    });
-
-    // Update the display
-    if (state.filteredBooks.length === 0) {
-        elements.booksContainer.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-warning">
-                    No books found matching your criteria. Try adjusting your search.
-                </div>
-            </div>
-        `;
+    // If no search query, show all books
+    if (!searchQuery) {
+        state.filteredBooks = [...state.allBooks];
     } else {
+        // Filter books based on search
+        state.filteredBooks = state.allBooks.filter(book => {
+            if (!book['book name']) return false;
+
+            return book['book name'].toLowerCase().includes(searchQuery) ||
+                   (book['author'] || '').toLowerCase().includes(searchQuery) ||
+                   (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
+                   (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
+        });
+    }
+
+    console.log('Found Books:', state.filteredBooks.length);
+
+    // Display books
+    if (state.filteredBooks.length > 0) {
+        // Calculate page range
         const start = (state.currentPage - 1) * CONFIG.booksPerPage;
         const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
         const booksToShow = state.filteredBooks.slice(start, end);
 
-        elements.booksContainer.innerHTML = booksToShow
-            .map(book => createBookCard(book))
-            .join('');
+        // Generate HTML for each book
+        const booksHTML = booksToShow.map(book => {
+            const title = book['book name'] || 'Unknown Title';
+            const author = book['author'] || 'Unknown Author';
+            const price = book['price'] ? `${book['price']} IQD` : null;
+            const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
+
+            return `
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
+                        <div class="position-relative" style="padding-top: 100%;">
+                            <img src="${photo}" 
+                                 class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
+                                 alt="${title}" 
+                                 style="object-fit: contain;"
+                                 onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
+                        </div>
+                        <div class="card-body d-flex flex-column p-4">
+                            <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
+                            <p class="card-text text-muted mb-3">by ${author}</p>
+                            <div class="mt-auto">
+                                ${price ? `
+                                    <p class="card-text mb-3">
+                                        <span class="badge bg-secondary px-3 py-2">${price}</span>
+                                    </p>
+                                ` : ''}
+                                <a href="#" 
+                                   class="btn btn-outline-primary mt-auto w-100" 
+                                   onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
+                                    View Details
+                                    <i class="fas fa-info-circle ms-2"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Update the display
+        elements.booksContainer.innerHTML = booksHTML;
+    } else {
+        // Show no results message
+        elements.booksContainer.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    No books found matching your search. Try a different term.
+                </div>
+            </div>
+        `;
     }
 
-    // Update UI
-    updateResultsCount();
-    updatePagination();
+    // Update UI elements
+    elements.resultsCount.innerHTML = `
+        <div class="alert alert-info">
+            Found ${state.filteredBooks.length} book${state.filteredBooks.length !== 1 ? 's' : ''}
+        </div>
+    `;
+
+    // Update pagination
+    const totalPages = Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage);
+    elements.pagination.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+        .map(page => `
+            <li class="page-item ${page === state.currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${page}); return false;">
+                    ${page}
+                </a>
+            </li>
+        `).join('');
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 
