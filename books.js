@@ -314,13 +314,16 @@ function sendPurchaseEmail(bookTitle) {
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
+    // Parse numbers (handles all, commas, dots, spaces)
     const parseNumber = (value) => {
-        if (!value) return 0;
-        if (typeof value === 'string' && value.toLowerCase() === 'all') return Infinity;
+        // Handle empty or "all" values
+        if (!value || value.toString().toLowerCase() === 'all') return 0;
+
+        // Clean up the number string and parse it
         return parseInt(value.toString().replace(/[\s,\.]/g, '')) || 0;
     };
 
-    // Build filters object
+    // Set up filters based on input values
     const filters = {
         age: {
             min: elements.filters.ageMin.value.toLowerCase() === 'all' ? 0 : parseNumber(elements.filters.ageMin.value),
@@ -332,37 +335,60 @@ function applyFilters() {
         }
     };
 
-    // Filter
+    // Filter books
     state.filteredBooks = state.allBooks.filter(book => {
+        // Skip books without names
         if (!book['book name']) return false;
 
-        // Search
-        const matchesSearch = !searchQuery || 
+        // Check if book matches search query
+        const matchesSearch = !searchQuery || (
             book['book name'].toLowerCase().includes(searchQuery) ||
             (book['author'] || '').toLowerCase().includes(searchQuery) ||
             (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
-            (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
+            (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery)
+        );
 
-        // book values
-        const bookAge = book['age']?.toString().toLowerCase() === 'all' ? 
-            0 : parseNumber(book['age']);
+        // Parse book age and price
+        const bookAge = book['age']?.toString().toLowerCase() === 'all' ? 0 : parseNumber(book['age']);
         const bookPrice = parseNumber(book['price']);
 
-        // Age
+        // Check if book matches age and price filters
         const matchesAge = bookAge >= filters.age.min && 
-            (filters.age.max === Infinity || bookAge <= filters.age.max);
-
-        // Price
+                          (filters.age.max === Infinity || bookAge <= filters.age.max);
+        
         const matchesPrice = bookPrice >= filters.price.min && 
-            (filters.price.max === Infinity || bookPrice <= filters.price.max);
+                            (filters.price.max === Infinity || bookPrice <= filters.price.max);
 
         return matchesSearch && matchesAge && matchesPrice;
     });
-    
+
+    // Update display
     state.currentPage = 1;
     displayBooks();
 }
-// UI Update Functions
+
+// Display functions
+function displayBooks() {
+    if (state.filteredBooks.length === 0) {
+        showNoResults();
+        return;
+    }
+
+    // Get books for current page
+    const start = (state.currentPage - 1) * CONFIG.booksPerPage;
+    const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
+    const booksToShow = state.filteredBooks.slice(start, end);
+
+    // Update the display
+    elements.booksContainer.innerHTML = booksToShow
+        .map(book => createBookCard(book))
+        .join('');
+
+    // Update UI elements
+    updateResultsCount();
+    updatePagination();
+}
+
 function updateResultsCount() {
     elements.resultsCount.innerHTML = `
         <div class="alert alert-info">
@@ -373,6 +399,8 @@ function updateResultsCount() {
 
 function updatePagination() {
     const totalPages = Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage);
+    
+    // Create pagination elements
     elements.pagination.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
         .map(page => `
             <li class="page-item ${page === state.currentPage ? 'active' : ''}">
@@ -380,7 +408,7 @@ function updatePagination() {
             </li>
         `).join('');
 
-    // Add pagination click handlers
+    // Add click handlers
     elements.pagination.querySelectorAll('.page-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -389,23 +417,12 @@ function updatePagination() {
     });
 }
 
-// Utility Functions (continued)
-function showLoading(show) {
-    elements.loadingIndicator.style.display = show ? 'block' : 'none';
-}
-
-function showError(message) {
-    elements.booksContainer.innerHTML = `
-        <div class="col-12">
-            <div class="alert alert-danger">${message}</div>
-        </div>
-    `;
-}
-
 function showNoResults() {
     elements.booksContainer.innerHTML = `
         <div class="col-12">
-            <div class="alert alert-warning">No books found matching your criteria.</div>
+            <div class="alert alert-warning">
+                No books found matching your criteria. Try adjusting your search or filters.
+            </div>
         </div>
     `;
     updateResultsCount();
@@ -418,6 +435,7 @@ function changePage(page) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Event handling
 function handleBookInteractions(event) {
     if (event.target.classList.contains('show-more-btn')) {
         event.preventDefault();
@@ -438,20 +456,33 @@ function handleBookInteractions(event) {
     }
 }
 
+// Utility functions
 function debounce(func, wait) {
     let timeout;
-    return function executedFunction(...args) {
+    return function(...args) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
 
-// Error handling for missing elements
+// Error handling
+function showError(message) {
+    elements.booksContainer.innerHTML = `
+        <div class="col-12">
+            <div class="alert alert-danger">${message}</div>
+        </div>
+    `;
+}
+
+function showLoading(show) {
+    elements.loadingIndicator.style.display = show ? 'block' : 'none';
+}
+
+// Validation
 function validateElements() {
     const missingElements = [];
     for (const [key, element] of Object.entries(elements)) {
         if (typeof element === 'object' && element !== null) {
-            // Check nested elements (like filters)
             for (const [nestedKey, nestedElement] of Object.entries(element)) {
                 if (!nestedElement) {
                     missingElements.push(`${key}.${nestedKey}`);
@@ -463,40 +494,6 @@ function validateElements() {
     }
 
     if (missingElements.length > 0) {
-        console.error('Missing DOM elements:', missingElements);
         throw new Error(`Required DOM elements missing: ${missingElements.join(', ')}`);
     }
-}
-
-// Initialize validation
-try {
-    validateElements();
-} catch (error) {
-    console.error('Initialization failed:', error);
-    document.body.innerHTML = `
-        <div class="container mt-5">
-            <div class="alert alert-danger">
-                Failed to initialize the application. Please refresh the page or contact support.
-            </div>
-        </div>
-    `;
-}
-
-// Handle global errors
-window.addEventListener('error', function(event) {
-    console.error('Global error:', event.error);
-    showError('An unexpected error occurred. Please refresh the page.');
-});
-
-// Export functions for potential testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        CONFIG,
-        state,
-        createBookCard,
-        applyFilters,
-        displayBooks,
-        updateResultsCount,
-        updatePagination
-    };
 }
