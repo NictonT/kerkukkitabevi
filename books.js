@@ -310,30 +310,48 @@ function sendPurchaseEmail(bookTitle) {
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
 
-// Filter Functions
+// filter icon-----------------------------
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
+    
+    // Parse price values handling both comma and dot formats
+    const parsePrice = (value) => {
+        if (!value || value.toLowerCase() === 'all') return 0;
+        return parseInt(value.toString().replace(/[,.]/g, '')) || 0;
+    };
+
+    // Parse age values handling "all" option
+    const parseAge = (value) => {
+        if (!value || value.toLowerCase() === 'all') return value.toLowerCase() === 'all' ? Infinity : 0;
+        return parseInt(value) || 0;
+    };
+
     const filters = {
         age: {
-            min: parseInt(elements.filters.ageMin.value) || 0,
-            max: parseInt(elements.filters.ageMax.value) || Infinity
+            min: parseAge(elements.filters.ageMin.value),
+            max: parseAge(elements.filters.ageMax.value)
         },
         price: {
-            min: parseInt(elements.filters.priceMin.value) || 0,
-            max: parseInt(elements.filters.priceMax.value) || Infinity
+            min: parsePrice(elements.filters.priceMin.value),
+            max: parsePrice(elements.filters.priceMax.value) || Infinity
         }
     };
 
     state.filteredBooks = state.allBooks.filter(book => {
         if (!book['book name']) return false;
 
+        // Search matching
         const matchesSearch = !searchQuery || 
             book['book name'].toLowerCase().includes(searchQuery) ||
-            (book['author'] || '').toLowerCase().includes(searchQuery);
+            (book['author'] || '').toLowerCase().includes(searchQuery) ||
+            (book['ISBN 10'] || '').toLowerCase().includes(searchQuery) ||
+            (book['ISBN 13'] || '').toLowerCase().includes(searchQuery);
 
-        const bookAge = parseInt(book['age']) || 0;
-        const bookPrice = parseInt(book['price']) || 0;
+        // Parse book values
+        const bookAge = book['age']?.toLowerCase() === 'all' ? 0 : parseInt(book['age']) || 0;
+        const bookPrice = parsePrice(book['price']);
 
+        // Check filters
         const matchesAge = bookAge >= filters.age.min && 
                           (filters.age.max === Infinity || bookAge <= filters.age.max);
         
