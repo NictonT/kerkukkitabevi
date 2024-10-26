@@ -24,6 +24,7 @@ const state = {
     currentPage: 1,
     allBooks: [],
     filteredBooks: [],
+    currentBook: null
 };
 
 // DOM Elements
@@ -42,13 +43,6 @@ const elements = {
     }
 };
 
-// Initialize application
-document.addEventListener('DOMContentLoaded', () => {
-    loadBooks();
-    setupEventListeners();
-    handleInitialUrl();
-});
-
 // URL Handling Functions
 function handleInitialUrl() {
     const path = window.location.pathname;
@@ -58,6 +52,7 @@ function handleInitialUrl() {
             waitForBooks(() => {
                 const book = findBookByUrlTitle(decodeURIComponent(bookTitle));
                 if (book) {
+                    state.currentBook = book;
                     showBookDetails(encodeURIComponent(JSON.stringify(book)));
                 }
             });
@@ -87,14 +82,40 @@ function createUrlFriendlyTitle(title) {
         .trim();
 }
 
+function updateUrl(book, isShowMore = false) {
+    if (!book) {
+        window.history.pushState({}, '', CONFIG.urlConfig.baseUrl);
+        return;
+    }
+    
+    const urlTitle = createUrlFriendlyTitle(book['book name'] || 'Unknown Title');
+    const url = `${CONFIG.urlConfig.baseUrl}${urlTitle}${isShowMore ? '/details' : ''}`;
+    window.history.pushState({ bookJSON: JSON.stringify(book), isShowMore }, '', url);
+}
+
+// Initialize application
+document.addEventListener('DOMContentLoaded', () => {
+    loadBooks();
+    setupEventListeners();
+    handleInitialUrl();
+});
+
 // Event Listeners
 function setupEventListeners() {
     elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
     elements.filters.applyButton.addEventListener('click', applyFilters);
     elements.booksContainer.addEventListener('click', handleBookInteractions);
+    
     window.addEventListener('popstate', (event) => {
         if (event.state && event.state.bookJSON) {
-            showBookDetails(event.state.bookJSON);
+            const book = JSON.parse(event.state.bookJSON);
+            if (event.state.isShowMore) {
+                handleShowMore(book);
+            } else {
+                showBookDetails(event.state.bookJSON);
+            }
+        } else {
+            state.currentBook = null;
         }
     });
 }
@@ -110,12 +131,9 @@ function loadBooks() {
             state.allBooks = results.data
                 .filter(book => book['book name'])
                 .sort((a, b) => {
-                    // Sort by availability first (available books come first)
                     const statusA = (a.status || '').toLowerCase() === 'available';
                     const statusB = (b.status || '').toLowerCase() === 'available';
                     if (statusA !== statusB) return statusB - statusA;
-                    
-                    // Then sort by title
                     return (a['book name'] || '').localeCompare(b['book name'] || '');
                 });
             state.filteredBooks = [...state.allBooks];
@@ -129,6 +147,7 @@ function loadBooks() {
         }
     });
 }
+
 // Display Functions
 function displayBooks() {
     if (state.filteredBooks.length === 0) {
@@ -147,7 +166,7 @@ function displayBooks() {
         const status = (book.status || '').toLowerCase() === 'available';
         
         if (status !== currentStatus) {
-            if (html) html += '</div>'; // Close previous section
+            if (html) html += '</div>';
             html += `
                 <div class="col-12">
                     <h4 class="mt-4 mb-3">${status ? 'Available Books' : 'Unavailable Books'}</h4>
@@ -160,7 +179,7 @@ function displayBooks() {
         html += createBookCard(book);
     });
 
-    if (html) html += '</div>'; // Close last section
+    if (html) html += '</div>';
     
     elements.booksContainer.innerHTML = html;
     updateResultsCount();
@@ -216,12 +235,8 @@ function createBookCard(book) {
 function handleBookClick(event, bookJSON) {
     event.preventDefault();
     const book = JSON.parse(decodeURIComponent(bookJSON));
-    const urlTitle = createUrlFriendlyTitle(book['book name'] || 'Unknown Title');
-    window.history.pushState(
-        { bookJSON: bookJSON },
-        '',
-        `${CONFIG.urlConfig.baseUrl}${urlTitle}`
-    );
+    state.currentBook = book;
+    updateUrl(book);
     showBookDetails(bookJSON);
 }
 
@@ -284,9 +299,16 @@ function createBookDetailsModal(book) {
                                 <p class="text-muted mb-4">by ${author}</p>
                                 
                                 ${details.description ? `
-                                    <div class="mb-4">
+                                    <div class="mb-4 description-container">
                                         <h6 class="fw-bold mb-2">Description</h6>
-                                        <p class="text-muted">${details.description}</p>
+                                        <p class="text-muted short-description">${details.description.substring(0, 150)}${details.description.length > 150 ? '...' : ''}</p>
+                                        <p class="text-muted full-description d-none">${details.description}</p>
+                                        ${details.description.length > 150 ? `
+                                            <button class="btn btn-link show-more-btn p-0"
+                                                    data-book='${encodeURIComponent(JSON.stringify(book))}'>
+                                                Show More
+                                            </button>
+                                        ` : ''}
                                     </div>
                                 ` : ''}
 
@@ -313,6 +335,7 @@ function createBookDetailsModal(book) {
         </div>
     `;
 }
+
 // Helper functions
 function renderDetailsColumn(details) {
     return details
@@ -356,15 +379,39 @@ function showBookDetails(bookJSON) {
         document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
         const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
         
-        // Handle modal close
         const modalElement = document.getElementById('bookDetailsModal');
         modalElement.addEventListener('hidden.bs.modal', () => {
-            window.history.pushState({}, '', CONFIG.urlConfig.baseUrl);
+            updateUrl(null);
+            state.currentBook = null;
         });
         
         modal.show();
     } catch (error) {
         console.error('Error showing book details:', error);
+    }
+}
+
+// Handle Show More/Less
+function handleBookInteractions(event) {
+    if (event.target.classList.contains('show-more-btn')) {
+        event.preventDefault();
+        const button = event.target;
+        const container = button.closest('.description-container');
+        const shortDesc = container.querySelector('.short-description');
+        const fullDesc = container.querySelector('.full-description');
+        const bookData = JSON.parse(decodeURIComponent(button.dataset.book));
+        
+        if (fullDesc.classList.contains('d-none')) {
+            fullDesc.classList.remove('d-none');
+            shortDesc.classList.add('d-none');
+            button.textContent = 'Show Less';
+            updateUrl(bookData, true);
+        } else {
+            fullDesc.classList.add('d-none');
+            shortDesc.classList.remove('d-none');
+            button.textContent = 'Show More';
+            updateUrl(bookData, false);
+        }
     }
 }
 
@@ -374,7 +421,7 @@ function sendPurchaseEmail(bookTitle) {
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
 
-// filter and search functions
+// Filter and search functions
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
@@ -425,7 +472,6 @@ function updatePagination() {
     });
 }
 
-// UI State Functions
 function showNoResults() {
     elements.booksContainer.innerHTML = `
         <div class="col-12">
@@ -454,27 +500,6 @@ function showError(message) {
 
 function showLoading(show) {
     elements.loadingIndicator.style.display = show ? 'block' : 'none';
-}
-
-// Event handling
-function handleBookInteractions(event) {
-    if (event.target.classList.contains('show-more-btn')) {
-        event.preventDefault();
-        const button = event.target;
-        const container = button.closest('.description-container');
-        const shortDesc = container.querySelector('.short-description');
-        const fullDesc = container.querySelector('.full-description');
-        
-        if (fullDesc.classList.contains('d-none')) {
-            fullDesc.classList.remove('d-none');
-            shortDesc.classList.add('d-none');
-            button.textContent = 'Show Less';
-        } else {
-            fullDesc.classList.add('d-none');
-            shortDesc.classList.remove('d-none');
-            button.textContent = 'Show More';
-        }
-    }
 }
 
 // Utility functions
@@ -507,7 +532,7 @@ function applyAgeFilter(books) {
     });
 }
 
-// Initialize Age and Price Ranges
+// Initialize Ranges
 function initializePriceRanges() {
     if (elements.filters.priceMin && elements.filters.priceMax) {
         elements.filters.priceMin.value = CONFIG.defaultFilters.price.min;
@@ -522,7 +547,6 @@ function initializeAgeRanges() {
     }
 }
 
-// Reset Filters
 function resetFilters() {
     elements.searchInput.value = '';
     initializePriceRanges();
@@ -569,6 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         initializePriceRanges();
         initializeAgeRanges();
+        handleInitialUrl();
     } catch (error) {
         console.error('Initialization error:', error);
         showError('Failed to initialize the application. Please refresh the page or contact support.');
