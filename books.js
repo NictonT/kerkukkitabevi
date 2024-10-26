@@ -312,80 +312,78 @@ function sendPurchaseEmail(bookTitle) {
 
 // filter icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
-    const searchQuery = elements.searchInput.value.toLowerCase().trim();
-    console.log('Search Query:', searchQuery); // Debug log
-    console.log('Total Books:', state.allBooks.length); // Debug log
+    console.log('Starting filter application...');
 
-    // Parse numbers (handles all, commas, dots, spaces)
+    // Get search query
+    const searchQuery = elements.searchInput.value.toLowerCase().trim();
+    console.log('Search query:', searchQuery);
+
+    // Simple number parser
     const parseNumber = (value) => {
-        if (!value || value.toString().toLowerCase() === 'all') return 0;
+        if (!value) return 0;
+        if (value.toString().toLowerCase() === 'all') return 0;
         return parseInt(value.toString().replace(/[\s,\.]/g, '')) || 0;
     };
 
-    const filters = {
-        age: {
-            min: elements.filters.ageMin.value.toLowerCase() === 'all' ? 0 : parseNumber(elements.filters.ageMin.value),
-            max: elements.filters.ageMax.value.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.ageMax.value)
-        },
-        price: {
-            min: parseNumber(elements.filters.priceMin.value),
-            max: elements.filters.priceMax.value.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.priceMax.value)
-        }
-    };
+    // Get filter values
+    const ageMin = elements.filters.ageMin.value.toLowerCase() === 'all' ? 0 : parseNumber(elements.filters.ageMin.value);
+    const ageMax = elements.filters.ageMax.value.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.ageMax.value);
+    const priceMin = parseNumber(elements.filters.priceMin.value);
+    const priceMax = elements.filters.priceMax.value.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.priceMax.value);
 
-    console.log('Filters:', filters); // Debug log
+    console.log('Filter values:', {
+        age: { min: ageMin, max: ageMax },
+        price: { min: priceMin, max: priceMax }
+    });
 
-    // Filter books
+    // Filter the books
     state.filteredBooks = state.allBooks.filter(book => {
-        // Skip books without names
+        // Ignore books without names
         if (!book['book name']) return false;
 
-        // Log book details for debugging
-        console.log('Checking book:', {
-            name: book['book name'],
-            searchIn: {
-                name: book['book name'].toLowerCase(),
-                author: (book['author'] || '').toLowerCase(),
-                isbn10: (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase(),
-                isbn13: (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase()
-            }
-        });
+        // Search matching
+        const bookName = (book['book name'] || '').toLowerCase();
+        const author = (book['author'] || '').toLowerCase();
+        const isbn10 = (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase();
+        const isbn13 = (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase();
 
-        // Check if book matches search query
-        const matchesSearch = !searchQuery || (
-            book['book name'].toLowerCase().includes(searchQuery) ||
-            (book['author'] || '').toLowerCase().includes(searchQuery) ||
-            (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
-            (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery)
-        );
+        // If there's a search query, check if anything matches
+        const matchesSearch = !searchQuery || 
+            bookName.includes(searchQuery) ||
+            author.includes(searchQuery) ||
+            isbn10.includes(searchQuery) ||
+            isbn13.includes(searchQuery);
 
-        // Parse book age and price
-        const bookAge = book['age']?.toString().toLowerCase() === 'all' ? 0 : parseNumber(book['age']);
+        // Parse book values
+        const bookAge = book['age']?.toLowerCase() === 'all' ? 0 : parseNumber(book['age']);
         const bookPrice = parseNumber(book['price']);
 
-        // Check if book matches age and price filters
-        const matchesAge = bookAge >= filters.age.min && 
-                          (filters.age.max === Infinity || bookAge <= filters.age.max);
-        
-        const matchesPrice = bookPrice >= filters.price.min && 
-                            (filters.price.max === Infinity || bookPrice <= filters.price.max);
+        // Check filter matches
+        const matchesAge = bookAge >= ageMin && (ageMax === Infinity || bookAge <= ageMax);
+        const matchesPrice = bookPrice >= priceMin && (priceMax === Infinity || bookPrice <= priceMax);
 
-        // Log matching results for debugging
-        console.log('Match results:', {
-            bookName: book['book name'],
-            matchesSearch,
-            matchesAge,
-            matchesPrice
-        });
+        // For debugging specific books
+        if (bookName === searchQuery) {
+            console.log('Found exact match:', {
+                book: bookName,
+                searchMatch: matchesSearch,
+                ageMatch: matchesAge,
+                priceMatch: matchesPrice,
+                bookAge,
+                bookPrice
+            });
+        }
 
+        // Return true only if all conditions match
         return matchesSearch && matchesAge && matchesPrice;
     });
 
-    console.log('Filtered Books:', state.filteredBooks.length); // Debug log
+    console.log(`Found ${state.filteredBooks.length} matching books`);
 
-    // Update display
+    // Update the display
     state.currentPage = 1;
     displayBooks();
+    updateResultsCount();
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 
