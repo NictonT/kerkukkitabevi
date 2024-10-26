@@ -314,77 +314,68 @@ function sendPurchaseEmail(bookTitle) {
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
     console.log('Search Query:', searchQuery);
-    console.log('Total Books:', state.allBooks.length);
 
-    // Parse numbers (handles all, commas, dots, spaces)
-    const parseNumber = (value) => {
-        if (!value || value.toString().toLowerCase() === 'all') return 0;
-        return parseInt(value.toString().replace(/[\s,\.]/g, '')) || 0;
-    };
-
-    // Get filter values with default values
-    const filters = {
-        age: {
-            min: elements.filters.ageMin.value?.toLowerCase() === 'all' ? 0 : parseNumber(elements.filters.ageMin.value) || 0,
-            max: elements.filters.ageMax.value?.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.ageMax.value) || Infinity
-        },
-        price: {
-            min: parseNumber(elements.filters.priceMin.value) || 0,
-            max: elements.filters.priceMax.value?.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.priceMax.value) || Infinity
-        }
-    };
-
-    console.log('Filters:', filters);
-
-    // Filter books
-    state.filteredBooks = state.allBooks.filter(book => {
-        // Skip invalid books
-        if (!book['book name']) return false;
-
-        // Check if book matches search query
-        const matchesSearch = !searchQuery || 
-            book['book name'].toLowerCase().includes(searchQuery) ||
-            (book['author'] || '').toLowerCase().includes(searchQuery) ||
-            (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
-            (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
-
-        // If search doesn't match, no need to check other filters
-        if (!matchesSearch) return false;
-
-        // Parse book values with defaults
-        let bookAge = 0;
-        if (book['age']) {
-            if (book['age'].toString().toLowerCase() === 'all') {
-                bookAge = 0;
-            } else {
-                bookAge = parseNumber(book['age']);
-            }
-        }
-
-        let bookPrice = parseNumber(book['price']);
-
-        // Check if book matches filters
-        const matchesAge = (filters.age.min === 0 && filters.age.max === Infinity) || // If no age filter is set
-                          (bookAge >= filters.age.min && bookAge <= filters.age.max);
-
-        const matchesPrice = (filters.price.min === 0 && filters.price.max === Infinity) || // If no price filter is set
-                          (bookPrice >= filters.price.min && bookPrice <= filters.price.max);
-
-        // Log match details for debugging
-        console.log('Match details for:', book['book name'], {
-            matchesSearch,
-            matchesAge,
-            matchesPrice,
-            bookAge,
-            bookPrice,
-            ageFilter: filters.age,
-            priceFilter: filters.price
+    // First do the search
+    let searchResults = state.allBooks;
+    
+    if (searchQuery) {
+        searchResults = state.allBooks.filter(book => {
+            if (!book['book name']) return false;
+            
+            return book['book name'].toLowerCase().includes(searchQuery) ||
+                   (book['author'] || '').toLowerCase().includes(searchQuery) ||
+                   (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
+                   (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
         });
+    }
 
-        return matchesSearch && matchesAge && matchesPrice;
-    });
+    console.log('Search Results:', searchResults.length);
 
-    console.log('Filtered Books:', state.filteredBooks.length);
+    // Then apply filters if needed
+    const hasFilters = elements.filters.ageMin.value || 
+                      elements.filters.ageMax.value || 
+                      elements.filters.priceMin.value || 
+                      elements.filters.priceMax.value;
+
+    if (!hasFilters) {
+        // If no filters, just use search results
+        state.filteredBooks = searchResults;
+    } else {
+        // Parse numbers for filters
+        const parseNumber = (value) => {
+            if (!value || value.toString().toLowerCase() === 'all') return 0;
+            return parseInt(value.toString().replace(/[\s,\.]/g, '')) || 0;
+        };
+
+        // Get filter values
+        const filters = {
+            age: {
+                min: elements.filters.ageMin.value?.toLowerCase() === 'all' ? 0 : parseNumber(elements.filters.ageMin.value) || 0,
+                max: elements.filters.ageMax.value?.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.ageMax.value) || Infinity
+            },
+            price: {
+                min: parseNumber(elements.filters.priceMin.value) || 0,
+                max: elements.filters.priceMax.value?.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.priceMax.value) || Infinity
+            }
+        };
+
+        // Apply filters to search results
+        state.filteredBooks = searchResults.filter(book => {
+            let bookAge = book['age']?.toString().toLowerCase() === 'all' ? 
+                0 : parseNumber(book['age']);
+            let bookPrice = parseNumber(book['price']);
+
+            const matchesAge = (filters.age.min === 0 && filters.age.max === Infinity) || 
+                             (bookAge >= filters.age.min && bookAge <= filters.age.max);
+
+            const matchesPrice = (filters.price.min === 0 && filters.price.max === Infinity) || 
+                               (bookPrice >= filters.price.min && bookPrice <= filters.price.max);
+
+            return matchesAge && matchesPrice;
+        });
+    }
+
+    console.log('Final Filtered Books:', state.filteredBooks.length);
 
     // Update display
     state.currentPage = 1;
