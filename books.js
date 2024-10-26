@@ -4,7 +4,7 @@ const CONFIG = {
     // File must be scv type.
     // Sometimes it authomatically updates i dont fully understand it...
     csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKVLJoqOcDonQqPm7e25B179_x0vp8hnDHivL73cGeopSnrno5fE8huqdntrGqEAeHzG88xmnquR5N/pub?output=csv',
-    booksPerPage: 25,
+    booksPerPage: 24,
     defaultFilters: {
         age: { min: 10, max: 18 },
         price: { min: 250, max: 50000 }
