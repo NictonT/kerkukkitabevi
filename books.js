@@ -310,76 +310,47 @@ function sendPurchaseEmail(bookTitle) {
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
 
-// filter icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
-    console.log('Search Query:', searchQuery);
 
-    // First do the search
-    let searchResults = state.allBooks;
-    
-    if (searchQuery) {
-        searchResults = state.allBooks.filter(book => {
-            if (!book['book name']) return false;
-            
-            return book['book name'].toLowerCase().includes(searchQuery) ||
-                   (book['author'] || '').toLowerCase().includes(searchQuery) ||
-                   (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
-                   (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
-        });
-    }
+    // Filter books based on search
+    state.filteredBooks = state.allBooks.filter(book => {
+        // Skip invalid books
+        if (!book['book name']) return false;
 
-    console.log('Search Results:', searchResults.length);
+        // If no search query, include all books
+        if (!searchQuery) return true;
 
-    // Then apply filters if needed
-    const hasFilters = elements.filters.ageMin.value || 
-                      elements.filters.ageMax.value || 
-                      elements.filters.priceMin.value || 
-                      elements.filters.priceMax.value;
+        // Check search matches
+        return book['book name'].toLowerCase().includes(searchQuery) ||
+               (book['author'] || '').toLowerCase().includes(searchQuery) ||
+               (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
+               (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
+    });
 
-    if (!hasFilters) {
-        // If no filters, just use search results
-        state.filteredBooks = searchResults;
+    // Update the display
+    if (state.filteredBooks.length === 0) {
+        elements.booksContainer.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    No books found matching your criteria. Try adjusting your search.
+                </div>
+            </div>
+        `;
     } else {
-        // Parse numbers for filters
-        const parseNumber = (value) => {
-            if (!value || value.toString().toLowerCase() === 'all') return 0;
-            return parseInt(value.toString().replace(/[\s,\.]/g, '')) || 0;
-        };
+        const start = (state.currentPage - 1) * CONFIG.booksPerPage;
+        const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
+        const booksToShow = state.filteredBooks.slice(start, end);
 
-        // Get filter values
-        const filters = {
-            age: {
-                min: elements.filters.ageMin.value?.toLowerCase() === 'all' ? 0 : parseNumber(elements.filters.ageMin.value) || 0,
-                max: elements.filters.ageMax.value?.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.ageMax.value) || Infinity
-            },
-            price: {
-                min: parseNumber(elements.filters.priceMin.value) || 0,
-                max: elements.filters.priceMax.value?.toLowerCase() === 'all' ? Infinity : parseNumber(elements.filters.priceMax.value) || Infinity
-            }
-        };
-
-        // Apply filters to search results
-        state.filteredBooks = searchResults.filter(book => {
-            let bookAge = book['age']?.toString().toLowerCase() === 'all' ? 
-                0 : parseNumber(book['age']);
-            let bookPrice = parseNumber(book['price']);
-
-            const matchesAge = (filters.age.min === 0 && filters.age.max === Infinity) || 
-                             (bookAge >= filters.age.min && bookAge <= filters.age.max);
-
-            const matchesPrice = (filters.price.min === 0 && filters.price.max === Infinity) || 
-                               (bookPrice >= filters.price.min && bookPrice <= filters.price.max);
-
-            return matchesAge && matchesPrice;
-        });
+        elements.booksContainer.innerHTML = booksToShow
+            .map(book => createBookCard(book))
+            .join('');
     }
 
-    console.log('Final Filtered Books:', state.filteredBooks.length);
-
-    // Update display
-    state.currentPage = 1;
-    displayBooks();
+    // Update UI
+    updateResultsCount();
+    updatePagination();
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 
