@@ -1,8 +1,5 @@
 // Configuration
 const CONFIG = {
-    // Changable filelink on google sheets.
-    // File must be scv type.
-    // Sometimes it authomatically updates i dont fully understand it...
     csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKVLJoqOcDonQqPm7e25B179_x0vp8hnDHivL73cGeopSnrno5fE8huqdntrGqEAeHzG88xmnquR5N/pub?output=csv',
     booksPerPage: 24,
     defaultFilters: {
@@ -60,7 +57,7 @@ function loadBooks() {
         header: true,
         complete: (results) => {
             state.allBooks = results.data.filter(book => book['book name']);
-            state.filteredBooks = [...state.allBooks];
+            state.filteredBooks = sortBooksByAvailability([...state.allBooks]);
             displayBooks();
             showLoading(false);
         },
@@ -69,6 +66,26 @@ function loadBooks() {
             showError('Failed to load books. Please try again later.');
             showLoading(false);
         }
+    });
+}
+
+// Sorting Function
+function sortBooksByAvailability(books) {
+    return [...books].sort((a, b) => {
+        const statusA = (a.status || '').toLowerCase();
+        const statusB = (b.status || '').toLowerCase();
+        
+        // First sort by availability
+        if (statusA === 'available' && statusB !== 'available') return -1;
+        if (statusA !== 'available' && statusB === 'available') return 1;
+        
+        // Then sort by price
+        const priceA = Number(a.price?.replace(/[^\d.-]/g, '')) || 0;
+        const priceB = Number(b.price?.replace(/[^\d.-]/g, '')) || 0;
+        if (priceA !== priceB) return priceA - priceB;
+        
+        // Then by title
+        return (a['book name'] || '').localeCompare(b['book name'] || '');
     });
 }
 
@@ -83,31 +100,64 @@ function displayBooks() {
     const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
     const booksToShow = state.filteredBooks.slice(start, end);
 
-    elements.booksContainer.innerHTML = booksToShow
-        .map(book => createBookCard(book))
-        .join('');
+    let currentAvailability = null;
+    let html = '';
 
+    booksToShow.forEach(book => {
+        const bookStatus = (book.status || '').toLowerCase();
+        
+        if (bookStatus !== currentAvailability) {
+            if (html !== '') {
+                html += '</div>'; // Close previous row
+            }
+            html += `
+                <div class="col-12 mb-4">
+                    <div class="alert alert-${bookStatus === 'available' ? 'success' : 'secondary'} mb-4">
+                        <h4 class="mb-0">
+                            ${bookStatus === 'available' ? 'Available Books' : 'Currently Unavailable Books'}
+                        </h4>
+                    </div>
+                </div>
+                <div class="row">
+            `;
+            currentAvailability = bookStatus;
+        }
+        
+        html += createBookCard(book);
+    });
+
+    if (html !== '') {
+        html += '</div>';
+    }
+
+    elements.booksContainer.innerHTML = html;
     updateResultsCount();
     updatePagination();
 }
-//verrrrrrrrry important books section
+
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
-    
-    // Simplify photo handling - use the exact path from the data
     const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
+    const status = (book.status || '').toLowerCase();
     
     return `
         <div class="col-md-4 mb-4">
-            <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
-                <div class="position-relative" style="padding-top: 100%;">
-                    <img src="${photo}" 
-                         class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
-                         alt="${title}" 
-                         style="object-fit: contain;"
-                         onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
+            <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300 ${status === 'available' ? 'border-success' : 'border-secondary'}">
+                <div class="position-relative">
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <span class="badge ${status === 'available' ? 'bg-success' : 'bg-secondary'} px-2 py-1">
+                            ${status === 'available' ? 'Available' : 'Unavailable'}
+                        </span>
+                    </div>
+                    <div style="padding-top: 100%;">
+                        <img src="${photo}" 
+                             class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
+                             alt="${title}" 
+                             style="object-fit: contain;"
+                             onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'">
+                    </div>
                 </div>
                 <div class="card-body d-flex flex-column p-4">
                     <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
@@ -115,11 +165,11 @@ function createBookCard(book) {
                     <div class="mt-auto">
                         ${price ? `
                             <p class="card-text mb-3">
-                                <span class="badge bg-secondary px-3 py-2">${price}</span>
+                                <span class="badge bg-primary px-3 py-2">${price}</span>
                             </p>
                         ` : ''}
                         <a href="#" 
-                           class="btn btn-outline-primary mt-auto w-100" 
+                           class="btn ${status === 'available' ? 'btn-outline-success' : 'btn-outline-secondary'} mt-auto w-100" 
                            onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
@@ -134,12 +184,9 @@ function createBookCard(book) {
 function createBookDetailsModal(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
-    const price = book['price'] ? `${book['price']} IQD` : null;
-    
-    //photo card
-    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
+    const photo = book['photo'] || book['Photo'] || CONFIG.paths.placeholderImage;
+    const status = (book.status || '').toLowerCase();
 
-    // Extract all possible book details
     const details = {
         price: book['price'] ? `${book['price']} IQD` : null,
         language: book['language'],
@@ -152,20 +199,6 @@ function createBookDetailsModal(book) {
         description: book['description'],
         status: book['status']
     };
-
-    // Group details into columns
-    const leftColumnDetails = [
-        { label: 'Language', value: details.language },
-        { label: 'Category', value: details.category },
-        { label: 'Age Range', value: details.age },
-        { label: 'Pages', value: details.papers }
-    ];
-
-    const rightColumnDetails = [
-        { label: 'ISBN 10', value: details.isbn10 },
-        { label: 'ISBN 13', value: details.isbn13 },
-        { label: 'Publishing Date', value: details.publishingDate }
-    ];
 
     return `
         <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-hidden="true">
@@ -183,8 +216,8 @@ function createBookDetailsModal(book) {
                                         <img src="${photo}" 
                                              class="position-absolute top-0 start-0 w-100 h-100" 
                                              alt="${title}"
-                                             onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'"
-                                             style="object-fit: contain;">
+                                             style="object-fit: contain;"
+                                             onerror="this.onerror=null; this.src='${CONFIG.paths.placeholderImage}'">
                                     </div>
                                     ${renderStatusAndPrice(details.status, details.price)}
                                 </div>
@@ -202,14 +235,23 @@ function createBookDetailsModal(book) {
 
                                 <div class="row">
                                     <div class="col-md-6">
-                                        ${renderDetailsColumn(leftColumnDetails)}
+                                        ${renderBookDetails([
+                                            { label: 'Language', value: details.language },
+                                            { label: 'Category', value: details.category },
+                                            { label: 'Age Range', value: details.age },
+                                            { label: 'Pages', value: details.papers }
+                                        ])}
                                     </div>
                                     <div class="col-md-6">
-                                        ${renderDetailsColumn(rightColumnDetails)}
+                                        ${renderBookDetails([
+                                            { label: 'ISBN 10', value: details.isbn10 },
+                                            { label: 'ISBN 13', value: details.isbn13 },
+                                            { label: 'Publishing Date', value: details.publishingDate }
+                                        ])}
                                     </div>
                                 </div>
 
-                                ${details.status?.toLowerCase() === 'available' ? `
+                                ${status === 'available' ? `
                                     <button class="btn btn-success w-100 mt-4" 
                                             onclick="sendPurchaseEmail('${encodeURIComponent(title)}')">
                                         <i class="fas fa-shopping-cart me-2"></i>Buy Now
@@ -224,13 +266,8 @@ function createBookDetailsModal(book) {
     `;
 }
 
-// Helper functions
-function getPhotoPath(photoValue) {
-    if (!photoValue) return 'photos/logo/placeholder.jpg';
-    return photoValue.includes('/') ? photoValue : `photos/logo/book photos/${photoValue}`;
-}
-
-function renderDetailsColumn(details) {
+// Helper Functions
+function renderBookDetails(details) {
     return details
         .filter(detail => detail.value)
         .map(detail => `
@@ -260,46 +297,37 @@ function renderStatusAndPrice(status, price) {
     `;
 }
 
-function showBookDetails(bookJSON) {
-    try {
-        const book = JSON.parse(decodeURIComponent(bookJSON));
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('bookDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Add new modal to body
-        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-        
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error showing book details:', error);
+// Search and Filter Functions
+function applyFilters() {
+    const searchQuery = elements.searchInput.value.toLowerCase().trim();
+
+    if (!searchQuery) {
+        state.filteredBooks = sortBooksByAvailability([...state.allBooks]);
+    } else {
+        state.filteredBooks = sortBooksByAvailability(
+            state.allBooks.filter(book => {
+                return book['book name']?.toLowerCase().includes(searchQuery) ||
+                       book['author']?.toLowerCase().includes(searchQuery) ||
+                       (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
+                       (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
+            })
+        );
     }
+
+    state.currentPage = 1;
+    displayBooks();
 }
 
-function sendPurchaseEmail(bookTitle) {
-    const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
-    const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
-    window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
-}
-//gfhdjsklskjhgfdfhjkloiuytrsdfghfx4ec65rv78b7
+// Modal Functions
 function showBookDetails(bookJSON) {
     const book = JSON.parse(decodeURIComponent(bookJSON));
     
-    // Remove existing modal if any
     const existingModal = document.getElementById('bookDetailsModal');
     if (existingModal) {
         existingModal.remove();
     }
     
-    // Add new modal to body
     document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-    
-    // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
     modal.show();
 }
@@ -310,105 +338,7 @@ function sendPurchaseEmail(bookTitle) {
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
 
-// filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-function applyFilters() {
-    const searchQuery = elements.searchInput.value.toLowerCase().trim();
-
-    // Filter books
-    if (!searchQuery) {
-        state.filteredBooks = [...state.allBooks];
-    } else {
-        state.filteredBooks = state.allBooks.filter(book => {
-            return book['book name']?.toLowerCase().includes(searchQuery) ||
-                   book['author']?.toLowerCase().includes(searchQuery) ||
-                   (book['ISBN 10'] || book['isbn10'] || '').toString().toLowerCase().includes(searchQuery) ||
-                   (book['ISBN 13'] || book['isbn13'] || '').toString().toLowerCase().includes(searchQuery);
-        });
-    }
-
-    // Display books using original createBookCard function
-    if (state.filteredBooks.length === 0) {
-        elements.booksContainer.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-warning">
-                    No books found matching your criteria.
-                </div>
-            </div>
-        `;
-    } else {
-        const start = (state.currentPage - 1) * CONFIG.booksPerPage;
-        const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
-        const booksToShow = state.filteredBooks.slice(start, end);
-
-        elements.booksContainer.innerHTML = booksToShow
-            .map(book => {
-                const title = book['book name'] || 'Unknown Title';
-                const author = book['author'] || 'Unknown Author';
-                const price = book['price'] ? `${book['price']} IQD` : null;
-                const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
-                
-                return `
-                    <div class="col-md-4 mb-4">
-                        <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
-                            <div class="position-relative" style="padding-top: 100%;">
-                                <img src="${photo}" 
-                                     class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
-                                     alt="${title}" 
-                                     style="object-fit: contain;"
-                                     onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
-                            </div>
-                            <div class="card-body d-flex flex-column p-4">
-                                <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
-                                <p class="card-text text-muted mb-3">by ${author}</p>
-                                <div class="mt-auto">
-                                    ${price ? `
-                                        <p class="card-text mb-3">
-                                            <span class="badge bg-secondary px-3 py-2">${price}</span>
-                                        </p>
-                                    ` : ''}
-                                    <a href="#" 
-                                       class="btn btn-outline-primary mt-auto w-100" 
-                                       onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
-                                        View Details
-                                        <i class="fas fa-info-circle ms-2"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            })
-            .join('');
-    }
-
-    // Update UI elements
-    updateResultsCount();
-    updatePagination();
-}
-//-------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// Display functions
-function displayBooks() {
-    if (state.filteredBooks.length === 0) {
-        showNoResults();
-        return;
-    }
-
-    // Get books for current page
-    const start = (state.currentPage - 1) * CONFIG.booksPerPage;
-    const end = Math.min(start + CONFIG.booksPerPage, state.filteredBooks.length);
-    const booksToShow = state.filteredBooks.slice(start, end);
-
-    // Update the display
-    elements.booksContainer.innerHTML = booksToShow
-        .map(book => createBookCard(book))
-        .join('');
-
-    // Update UI elements
-    updateResultsCount();
-    updatePagination();
-}
-
+// UI Update Functions
 function updateResultsCount() {
     elements.resultsCount.innerHTML = `
         <div class="alert alert-info">
@@ -420,7 +350,6 @@ function updateResultsCount() {
 function updatePagination() {
     const totalPages = Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage);
     
-    // Create pagination elements
     elements.pagination.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
         .map(page => `
             <li class="page-item ${page === state.currentPage ? 'active' : ''}">
@@ -428,7 +357,6 @@ function updatePagination() {
             </li>
         `).join('');
 
-    // Add click handlers
     elements.pagination.querySelectorAll('.page-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -485,17 +413,47 @@ function debounce(func, wait) {
     };
 }
 
-// Error handling
+// Loading and Error Handling
+function showLoading(show) {
+    if (elements.loadingIndicator) {
+        elements.loadingIndicator.style.display = show ? 'block' : 'none';
+        
+        if (show) {
+            elements.booksContainer.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading books...</p>
+                </div>
+            `;
+        }
+    }
+}
+
 function showError(message) {
     elements.booksContainer.innerHTML = `
         <div class="col-12">
-            <div class="alert alert-danger">${message}</div>
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                ${message}
+            </div>
         </div>
     `;
 }
 
-function showLoading(show) {
-    elements.loadingIndicator.style.display = show ? 'block' : 'none';
+// Price Formatting
+function formatPrice(price) {
+    if (!price) return null;
+    const numericPrice = Number(price.replace(/[^\d.-]/g, ''));
+    if (isNaN(numericPrice)) return null;
+    return `${numericPrice.toLocaleString()} IQD`;
+}
+
+// Image Handling
+function handleImageError(img) {
+    img.onerror = null;
+    img.src = CONFIG.paths.placeholderImage;
 }
 
 // Validation
@@ -514,6 +472,75 @@ function validateElements() {
     }
 
     if (missingElements.length > 0) {
-        throw new Error(`Required DOM elements missing: ${missingElements.join(', ')}`);
+        console.error(`Missing DOM elements: ${missingElements.join(', ')}`);
+        showError('Some page elements are missing. Please refresh the page or contact support.');
+        return false;
+    }
+    return true;
+}
+
+// Enhanced Filter Functionality
+function applyPriceFilter(books) {
+    const minPrice = Number(elements.filters.priceMin.value) || CONFIG.defaultFilters.price.min;
+    const maxPrice = Number(elements.filters.priceMax.value) || CONFIG.defaultFilters.price.max;
+
+    return books.filter(book => {
+        const price = Number(book.price?.replace(/[^\d.-]/g, '')) || 0;
+        return price >= minPrice && price <= maxPrice;
+    });
+}
+
+function applyAgeFilter(books) {
+    const minAge = Number(elements.filters.ageMin.value) || CONFIG.defaultFilters.age.min;
+    const maxAge = Number(elements.filters.ageMax.value) || CONFIG.defaultFilters.age.max;
+
+    return books.filter(book => {
+        const age = Number(book.age?.replace(/[^\d.-]/g, '')) || 0;
+        return age >= minAge && age <= maxAge;
+    });
+}
+
+// Initialize Price Range Inputs
+function initializePriceRanges() {
+    if (elements.filters.priceMin && elements.filters.priceMax) {
+        elements.filters.priceMin.value = CONFIG.defaultFilters.price.min;
+        elements.filters.priceMax.value = CONFIG.defaultFilters.price.max;
     }
 }
+
+// Initialize Age Range Inputs
+function initializeAgeRanges() {
+    if (elements.filters.ageMin && elements.filters.ageMax) {
+        elements.filters.ageMin.value = CONFIG.defaultFilters.age.min;
+        elements.filters.ageMax.value = CONFIG.defaultFilters.age.max;
+    }
+}
+
+// Reset Filters
+function resetFilters() {
+    elements.searchInput.value = '';
+    initializePriceRanges();
+    initializeAgeRanges();
+    state.filteredBooks = sortBooksByAvailability([...state.allBooks]);
+    state.currentPage = 1;
+    displayBooks();
+}
+
+// Add this to your initialization
+document.addEventListener('DOMContentLoaded', () => {
+    if (validateElements()) {
+        loadBooks();
+        setupEventListeners();
+        initializePriceRanges();
+        initializeAgeRanges();
+    }
+});
+
+// Optional: Add keyboard navigation for pagination
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' && state.currentPage > 1) {
+        changePage(state.currentPage - 1);
+    } else if (e.key === 'ArrowRight' && state.currentPage < Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage)) {
+        changePage(state.currentPage + 1);
+    }
+});
