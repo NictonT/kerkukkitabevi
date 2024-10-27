@@ -1,7 +1,7 @@
 // Configuration
 const CONFIG = {
     csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRejUBQCi2XvKxDyrffK2jLZ3BCFBP0D2gCJ17CgChmvaf4GQ1-oACta3DzmOQhdOtwg57ExSVUWMGs/pub?output=csv',
-    articlesPerPage: 12,
+    articlesPerPage: 24,
 };
 
 // State management
@@ -9,8 +9,27 @@ const state = {
     currentPage: 1,
     allArticles: [],
     filteredArticles: [],
-    loadedArticleContents: new Map()
 };
+
+// DOM Elements
+const elements = {
+    searchInput: document.getElementById('searchInput'),
+    articlesContainer: document.getElementById('articlesContainer'),
+    loadingIndicator: document.getElementById('loadingIndicator'),
+    resultsCount: document.getElementById('resultsCount'),
+    pagination: document.getElementById('pagination'),
+};
+
+// Initialize application
+document.addEventListener('DOMContentLoaded', () => {
+    loadArticles();
+    setupEventListeners();
+});
+
+// Event Listeners
+function setupEventListeners() {
+    elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
+}
 
 // Articles Loading
 function loadArticles() {
@@ -20,24 +39,14 @@ function loadArticles() {
         download: true,
         header: true,
         complete: (results) => {
-            console.log('Raw data:', results.data); // Debug log
-            
             state.allArticles = results.data
-                .filter(article => {
-                    // Check for required fields using correct column names
-                    return article && 
-                           article.title && 
-                           article['en article']; // Note the space in column name
+                .filter(article => article.title)
+                .sort((a, b) => {
+                    // Sort by date (newest first)
+                    return new Date(b.date) - new Date(a.date);
                 });
-
-            console.log('Filtered articles:', state.allArticles); // Debug log
-            
-            if (state.allArticles.length > 0) {
-                state.filteredArticles = [...state.allArticles];
-                displayArticles();
-            } else {
-                showError('No articles available. Please check back later.');
-            }
+            state.filteredArticles = [...state.allArticles];
+            displayArticles();
             showLoading(false);
         },
         error: (error) => {
@@ -48,128 +57,158 @@ function loadArticles() {
     });
 }
 
-async function fetchArticleContent(url) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch article content');
-        const html = await response.text();
-        
-        // Extract content from Google Doc published page
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        
-        // Try different content selectors for Google Docs
-        const content = doc.querySelector('#contents') || 
-                       doc.querySelector('[role="main"]') ||
-                       doc.querySelector('.doc-content');
-        
-        if (!content) {
-            throw new Error('Could not find content in the document');
-        }
-
-        return content.innerHTML;
-    } catch (error) {
-        console.error('Error fetching article:', error);
-        throw error;
+// Display Functions
+function displayArticles() {
+    if (state.filteredArticles.length === 0) {
+        showNoResults();
+        return;
     }
-}
 
-async function showArticleDetails(articleJSON) {
-    try {
-        const article = JSON.parse(decodeURIComponent(articleJSON));
-        console.log('Showing article details:', article);
-        
-        // Show modal with loading state
-        elements.modal.title.textContent = article.title;
-        elements.modal.content.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        `;
-        
-        const modal = new bootstrap.Modal(elements.modal.container);
-        modal.show();
+    const start = (state.currentPage - 1) * CONFIG.articlesPerPage;
+    const end = Math.min(start + CONFIG.articlesPerPage, state.filteredArticles.length);
+    const articlesToShow = state.filteredArticles.slice(start, end);
 
-        // Check if content is already cached
-        if (state.loadedArticleContents.has(article['en article'])) {
-            elements.modal.content.innerHTML = state.loadedArticleContents.get(article['en article']);
-            return;
-        }
+    const html = `
+        <div class="row g-4">
+            ${articlesToShow.map(article => createArticleCard(article)).join('')}
+        </div>
+    `;
 
-        // Fetch and process the content
-        const content = await fetchArticleContent(article['en article']);
-        
-        // Style the content
-        const styledContent = `
-            <div class="article-content">
-                <style>
-                    .article-content {
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                        line-height: 1.6;
-                        color: #333;
-                        padding: 1rem;
-                    }
-                    .article-content img {
-                        max-width: 100%;
-                        height: auto;
-                        margin: 1rem 0;
-                    }
-                    .article-content h1, 
-                    .article-content h2, 
-                    .article-content h3 {
-                        margin-top: 1.5rem;
-                        margin-bottom: 1rem;
-                    }
-                    .article-content p {
-                        margin-bottom: 1rem;
-                    }
-                </style>
-                ${content}
-            </div>
-        `;
-        
-        // Cache the content
-        state.loadedArticleContents.set(article['en article'], styledContent);
-        
-        // Update modal content
-        elements.modal.content.innerHTML = styledContent;
-        
-    } catch (error) {
-        console.error('Error showing article details:', error);
-        elements.modal.content.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                Failed to load article content. Please try again later.
-            </div>
-        `;
-    }
+    elements.articlesContainer.innerHTML = html;
+    updateResultsCount();
+    updatePagination();
 }
 
 function createArticleCard(article) {
+    const title = article.title || 'Unknown Title';
+    const date = article.date ? new Date(article.date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }) : 'No date';
+
     return `
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
-                <div class="card-body p-4">
-                    <h5 class="card-title fs-4 mb-3">${article.title}</h5>
+                <div class="card-body d-flex flex-column p-4">
+                    <h5 class="card-title fs-4 mb-2">${title}</h5>
                     <p class="card-text text-muted mb-3">
-                        <i class="fas fa-calendar-alt me-2"></i>${article.date || 'No date'}
+                        <i class="fas fa-calendar-alt me-2"></i>${date}
                     </p>
                     <div class="mt-auto">
-                        <button 
-                            class="btn btn-outline-primary w-100" 
-                            onclick="showArticleDetails('${encodeURIComponent(JSON.stringify({
-                                title: article.title,
-                                date: article.date,
-                                'en article': article['en article']
-                            }))}')">
+                        <a href="#" 
+                           class="btn btn-outline-primary mt-auto w-100" 
+                           onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}'); return false;">
                             Read Article
                             <i class="fas fa-arrow-right ms-2"></i>
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     `;
 }
+
+function showArticleDetails(articleJSON) {
+    try {
+        const article = JSON.parse(decodeURIComponent(articleJSON));
+        window.location.href = article['en article'];
+    } catch (error) {
+        console.error('Error showing article details:', error);
+    }
+}
+
+// Filter and search 
+function applyFilters() {
+    const searchQuery = elements.searchInput.value.toLowerCase().trim();
+
+    if (!searchQuery) {
+        state.filteredArticles = [...state.allArticles];
+    } else {
+        state.filteredArticles = state.allArticles.filter(article => {
+            return article.title?.toLowerCase().includes(searchQuery);
+        });
+    }
+
+    state.currentPage = 1;
+    displayArticles();
+}
+
+function updateResultsCount() {
+    const searchQuery = elements.searchInput.value.trim();
+    
+    if (searchQuery) {
+        elements.resultsCount.innerHTML = `
+            <div class="alert alert-info">
+                Found ${state.filteredArticles.length} article${state.filteredArticles.length !== 1 ? 's' : ''}
+            </div>
+        `;
+    } else {
+        elements.resultsCount.innerHTML = '';
+    }
+}
+
+function updatePagination() {
+    const totalPages = Math.ceil(state.filteredArticles.length / CONFIG.articlesPerPage);
+    
+    elements.pagination.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+        .map(page => `
+            <li class="page-item ${page === state.currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${page}">${page}</a>
+            </li>
+        `).join('');
+
+    elements.pagination.querySelectorAll('.page-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            changePage(parseInt(e.target.dataset.page));
+        });
+    });
+}
+
+function showNoResults() {
+    elements.articlesContainer.innerHTML = `
+        <div class="col-12">
+            <div class="alert alert-warning">
+                No articles found matching your criteria. Try adjusting your search.
+            </div>
+        </div>
+    `;
+    updateResultsCount();
+    updatePagination();
+}
+
+function changePage(page) {
+    state.currentPage = page;
+    displayArticles();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showError(message) {
+    elements.articlesContainer.innerHTML = `
+        <div class="col-12">
+            <div class="alert alert-danger">${message}</div>
+        </div>
+    `;
+}
+
+function showLoading(show) {
+    elements.loadingIndicator.style.display = show ? 'block' : 'none';
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Keyboard navigation for pagination
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' && state.currentPage > 1) {
+        changePage(state.currentPage - 1);
+    } else if (e.key === 'ArrowRight' && state.currentPage < Math.ceil(state.filteredArticles.length / CONFIG.articlesPerPage)) {
+        changePage(state.currentPage + 1);
+    }
+});
