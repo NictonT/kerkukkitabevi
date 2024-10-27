@@ -148,7 +148,8 @@ function createBookCard(book) {
                         ` : ''}
                         <a href="#" 
                            class="btn btn-outline-primary mt-auto w-100" 
-                           onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
+                           data-book="${btoa(JSON.stringify(book))}"
+                           onclick="showBookDetails(this.getAttribute('data-book')); return false;">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
                         </a>
@@ -247,7 +248,7 @@ function createBookDetailsModal(book) {
         </div>
     `;
 }
-// Helper functions
+
 function renderDetailsColumn(details) {
     return details
         .filter(detail => detail.value)
@@ -278,6 +279,22 @@ function renderStatusAndPrice(status, price) {
     `;
 }
 
+function showBookDetails(bookData) {
+    try {
+        const book = JSON.parse(atob(bookData));
+        
+        const existingModal = document.getElementById('bookDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error showing book details:', error);
+    }
+}
 // filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
