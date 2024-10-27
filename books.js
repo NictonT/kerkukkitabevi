@@ -127,26 +127,9 @@ function createBookCard(book) {
     const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
     const status = (book.status || '').toLowerCase();
     
-    // Create a clean book object with only needed data
-    const cleanBook = {
-        'book name': book['book name'],
-        'author': book['author'],
-        'price': book['price'],
-        'photo': photo,
-        'Photo': book['Photo'],
-        'language': book['language'],
-        'category': book['category'],
-        'age': book['age'],
-        'papers': book['papers'],
-        'ISBN 10': book['ISBN 10'],
-        'ISBN 13': book['ISBN 13'],
-        'publishing date': book['publishing date'],
-        'description': book['description'],
-        'status': book['status']
-    };
-
-    // Convert to base64 to avoid encoding issues
-    const bookData = btoa(unescape(encodeURIComponent(JSON.stringify(cleanBook))));
+    // Properly escape the book data for JSON encoding
+    const escapedBookData = encodeURIComponent(JSON.stringify(book))
+        .replace(/'/g, '%27'); // Additional encoding for single quotes
     
     return `
         <div class="col-md-4 mb-4">
@@ -154,13 +137,13 @@ function createBookCard(book) {
                 <div class="position-relative" style="padding-top: 100%;">
                     <img src="${photo}" 
                          class="card-img-top position-absolute top-0 start-0 w-100 h-100 p-3" 
-                         alt="${title}" 
+                         alt="${title.replace(/'/g, '&apos;')}" 
                          style="object-fit: contain;"
                          onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'">
                 </div>
                 <div class="card-body d-flex flex-column p-4">
-                    <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
-                    <p class="card-text text-muted mb-3">by ${author}</p>
+                    <h5 class="card-title fs-4 mb-2 text-truncate">${title.replace(/'/g, '&apos;')}</h5>
+                    <p class="card-text text-muted mb-3">by ${author.replace(/'/g, '&apos;')}</p>
                     <div class="mt-auto">
                         ${price ? `
                             <p class="card-text mb-3">
@@ -169,8 +152,7 @@ function createBookCard(book) {
                         ` : ''}
                         <a href="#" 
                            class="btn btn-outline-primary mt-auto w-100" 
-                           data-book="${bookData}"
-                           onclick="showBookDetails(this.getAttribute('data-book')); return false;">
+                           onclick="showBookDetails('${escapedBookData}'); return false;">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
                         </a>
@@ -181,23 +163,128 @@ function createBookCard(book) {
     `;
 }
 
-function showBookDetails(bookData) {
-    try {
-        // Decode the base64 string back to JSON
-        const book = JSON.parse(decodeURIComponent(escape(atob(bookData))));
-        
-        const existingModal = document.getElementById('bookDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error showing book details:', error);
-        alert('Could not display book details. Please try again.');
-    }
+function createBookDetailsModal(book) {
+    const title = (book['book name'] || 'Unknown Title').replace(/'/g, '&apos;');
+    const author = (book['author'] || 'Unknown Author').replace(/'/g, '&apos;');
+    const price = book['price'] ? `${book['price']} IQD` : null;
+    const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
+
+    const details = {
+        price: book['price'] ? `${book['price']} IQD` : null,
+        language: book['language'],
+        category: book['category'],
+        age: book['age'],
+        papers: book['papers'],
+        isbn10: book['ISBN 10'] || book['isbn10'],
+        isbn13: book['ISBN 13'] || book['isbn13'],
+        publishingDate: book['publishing_date'] || book['publishing date'],
+        description: book['description']?.replace(/'/g, '&apos;'),
+        status: book['status']
+    };
+
+    const leftColumnDetails = [
+        { label: 'Language', value: details.language },
+        { label: 'Category', value: details.category },
+        { label: 'Age Range', value: details.age },
+        { label: 'Pages', value: details.papers }
+    ];
+
+    const rightColumnDetails = [
+        { label: 'ISBN 10', value: details.isbn10 },
+        { label: 'ISBN 13', value: details.isbn13 },
+        { label: 'Publishing Date', value: details.publishingDate }
+    ];
+
+    // Properly escape the title for the email function
+    const escapedTitle = encodeURIComponent(book['book name'] || 'Unknown Title')
+        .replace(/'/g, '%27');
+
+    return `
+        <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title fs-4">Book Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="position-relative rounded shadow-sm mb-4" style="padding-top: 133%;">
+                                        <img src="${photo}" 
+                                             class="position-absolute top-0 start-0 w-100 h-100" 
+                                             alt="${title}"
+                                             onerror="this.onerror=null; this.src='photos/logo/placeholder.jpg'"
+                                             style="object-fit: contain;">
+                                    </div>
+                                    ${renderStatusAndPrice(details.status, details.price)}
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <h4 class="fs-3 mb-2">${title}</h4>
+                                <p class="text-muted mb-4">by ${author}</p>
+                                
+                                ${details.description ? `
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold mb-2">Description</h6>
+                                        <p class="text-muted">${details.description}</p>
+                                    </div>
+                                ` : ''}
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        ${renderDetailsColumn(leftColumnDetails)}
+                                    </div>
+                                    <div class="col-md-6">
+                                        ${renderDetailsColumn(rightColumnDetails)}
+                                    </div>
+                                </div>
+
+                                ${details.status?.toLowerCase() === 'available' ? `
+                                    <button class="btn btn-success w-100 mt-4" 
+                                            onclick="sendPurchaseEmail('${escapedTitle}')">
+                                        <i class="fas fa-shopping-cart me-2"></i>Buy Now
+                                    </button>
+                                ` : '<button class="btn btn-secondary w-100 mt-4" disabled>Sold Out</button>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Helper functions remain the same
+function renderDetailsColumn(details) {
+    return details
+        .filter(detail => detail.value)
+        .map(detail => `
+            <div class="mb-3">
+                <strong class="d-block text-dark mb-1">${detail.label}:</strong>
+                <span class="text-muted">${String(detail.value).replace(/'/g, '&apos;')}</span>
+            </div>
+        `).join('');
+}
+
+function renderStatusAndPrice(status, price) {
+    if (!status && !price) return '';
+    
+    return `
+        <div class="d-flex justify-content-center gap-2 flex-wrap">
+            ${status ? `
+                <span class="badge ${status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary'} px-3 py-2">
+                    ${status}
+                </span>
+            ` : ''}
+            ${price ? `
+                <span class="badge bg-primary px-3 py-2">
+                    ${price}
+                </span>
+            ` : ''}
+        </div>
+    `;
 }
 // filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
