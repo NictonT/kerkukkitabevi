@@ -15,6 +15,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Papa Parse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script>
+        // Handle redirected routes from 404.html
+        (function() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var path = urlParams.get('p');
+            if (path) {
+                // Remove the 'p' parameter from the URL
+                window.history.replaceState(null, '', path);
+            }
+        })();
+    </script>
 </head>
 <body>
     <!-- Navigation -->
@@ -40,50 +51,50 @@
         </div>
     </nav>
 
-    <!-- Articles Section -->
-    <section class="articles-section py-5">
-        <div class="container">
-            <!-- Search and Filters -->
-            <div class="row mb-4">
-                <div class="col-md-8 mb-3">
-                    <div class="search-box position-relative">
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search articles...">
-                        <i class="fas fa-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+    <div id="mainContent">
+        <!-- Articles Section -->
+        <section class="articles-section py-5">
+            <div class="container">
+                <!-- Search and Filters -->
+                <div class="row mb-4">
+                    <div class="col-md-8 mb-3">
+                        <div class="search-box position-relative">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search articles...">
+                            <i class="fas fa-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Results Count -->
+                <div id="resultsCount" class="mb-3"></div>
+
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading articles...</p>
+                </div>
+
+                <!-- Articles Container -->
+                <div id="articlesContainer" class="row g-4"></div>
+
+                <!-- Pagination -->
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                </nav>
             </div>
+        </section>
 
-            <!-- Results Count -->
-            <div id="resultsCount" class="mb-3"></div>
-
-            <!-- Loading Indicator -->
-            <div id="loadingIndicator" class="text-center my-5">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-
-            <!-- Articles Container -->
-            <div id="articlesContainer"></div>
-
-            <!-- Pagination -->
-            <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center" id="pagination"></ul>
-            </nav>
-        </div>
-    </section>
-
-    <!-- Article Modal -->
-    <div class="modal fade" id="articleModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="articleContent" class="article-content"></div>
-                </div>
+        <!-- Error Display -->
+        <div id="errorDisplay" class="container my-5" style="display: none;">
+            <div class="alert alert-danger">
+                <h4 class="alert-heading">Error</h4>
+                <p id="errorMessage"></p>
+                <hr>
+                <p class="mb-0">
+                    <a href="./articles" class="alert-link">Return to articles list</a>
+                </p>
             </div>
         </div>
     </div>
@@ -137,6 +148,6 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom Script -->
-    <script src="article.js"></script>
+    <script src="articles.js"></script>
 </body>
 </html>
