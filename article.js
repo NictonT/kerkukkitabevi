@@ -57,7 +57,7 @@ function loadArticles() {
     });
 }
 
-// Display Functions
+// Display Functions==================================================================================================
 function displayArticles() {
     if (state.filteredArticles.length === 0) {
         showNoResults();
@@ -96,12 +96,32 @@ function createArticleCard(article) {
                         <i class="fas fa-calendar-alt me-2"></i>${date}
                     </p>
                     <div class="mt-auto">
-                        <a href="#" 
-                           class="btn btn-outline-primary mt-auto w-100" 
-                           onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}'); return false;">
-                            Read Article
-                            <i class="fas fa-arrow-right ms-2"></i>
-                        </a>
+                        <button 
+                            class="btn btn-outline-primary w-100 mb-2" 
+                            onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}', this)">
+                            Show More
+                            <i class="fas fa-chevron-down ms-2"></i>
+                        </button>
+                        <div class="article-content collapse" id="article-${article.title.replace(/\s+/g, '-').toLowerCase()}">
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <div class="embed-responsive embed-responsive-16by9">
+                                        <iframe class="embed-responsive-item w-100" 
+                                                src="${article['en article']}" 
+                                                style="height: 500px; border: none;">
+                                        </iframe>
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <a href="${article['en article']}" 
+                                           target="_blank" 
+                                           class="btn btn-sm btn-primary">
+                                            Open in New Tab
+                                            <i class="fas fa-external-link-alt ms-2"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -109,16 +129,48 @@ function createArticleCard(article) {
     `;
 }
 
-function showArticleDetails(articleJSON) {
+function showArticleDetails(articleJSON, buttonElement) {
     try {
         const article = JSON.parse(decodeURIComponent(articleJSON));
-        window.location.href = article['en article'];
+        const contentId = `article-${article.title.replace(/\s+/g, '-').toLowerCase()}`;
+        const contentElement = document.getElementById(contentId);
+        
+        // Toggle the content visibility
+        if (contentElement.classList.contains('show')) {
+            contentElement.classList.remove('show');
+            buttonElement.innerHTML = `Show More <i class="fas fa-chevron-down ms-2"></i>`;
+        } else {
+            contentElement.classList.add('show');
+            buttonElement.innerHTML = `Show Less <i class="fas fa-chevron-up ms-2"></i>`;
+        }
+
     } catch (error) {
         console.error('Error showing article details:', error);
     }
 }
 
-// Filter and search 
+// Add this CSS to your stylesheet or in a style tag
+const styles = `
+    .collapse {
+        display: none;
+    }
+    .collapse.show {
+        display: block;
+    }
+    .card-body {
+        transition: all 0.3s ease;
+    }
+    .article-content iframe {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 4px;
+    }
+`;
+
+// Add styles to document
+const styleSheet = document.createElement("style");
+styleSheet.innerText = styles;
+document.head.appendChild(styleSheet);
+// Filter and search ===========================================================================================================
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
