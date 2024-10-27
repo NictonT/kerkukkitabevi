@@ -11,38 +11,36 @@ const state = {
     filteredArticles: [],
 };
 
-// Modal HTML
-const modalHTML = `
-<div class="modal fade" id="articleModal" tabindex="-1" aria-labelledby="articleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="articleModalLabel"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>`;
-
 // DOM Elements
 const elements = {
     searchInput: document.getElementById('searchInput'),
     articlesContainer: document.getElementById('articlesContainer'),
     loadingIndicator: document.getElementById('loadingIndicator'),
     resultsCount: document.getElementById('resultsCount'),
-    pagination: document.getElementById('pagination')
+    pagination: document.getElementById('pagination'),
+    mainContent: document.getElementById('mainContent'),
+    errorDisplay: document.getElementById('errorDisplay'),
+    errorMessage: document.getElementById('errorMessage')
 };
 
 // Initialize application
-document.addEventListener('DOMContentLoaded', () => {
-    // Add modal to the page
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    loadArticles();
-    setupEventListeners();
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Check if we're on an article page
+        const path = window.location.pathname;
+        const match = path.match(/\/article\/(\d+)$/);
+        
+        if (match) {
+            const articleId = match[1];
+            await handleArticleRoute(articleId);
+        } else {
+            await loadArticles();
+            setupEventListeners();
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showError('Failed to initialize the application');
+    }
 });
 
 // Event Listeners
@@ -50,32 +48,62 @@ function setupEventListeners() {
     elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
 }
 
-// Articles Loading
-function loadArticles() {
+// Article routing
+async function handleArticleRoute(articleId) {
     showLoading(true);
-    
-    Papa.parse(CONFIG.csvUrl, {
-        download: true,
-        header: true,
-        complete: (results) => {
-            console.log('Raw data:', results.data); // Debug log
-            state.allArticles = results.data
-                .filter(article => article.title)
-                .sort((a, b) => {
-                    // Sort by date (newest first)
-                    return new Date(b.date) - new Date(a.date);
-                });
-            console.log('Filtered articles:', state.allArticles); // Debug log
-            state.filteredArticles = [...state.allArticles];
-            displayArticles();
-            showLoading(false);
-        },
-        error: (error) => {
-            console.error('Error loading articles:', error);
-            showError('Failed to load articles. Please try again later.');
-            showLoading(false);
+    try {
+        const article = await findArticleById(articleId);
+        if (article && article['en article']) {
+            // Redirect to the Google Doc
+            window.location.href = article['en article'];
+        } else {
+            showError('Article not found');
         }
+    } catch (error) {
+        console.error('Error loading article:', error);
+        showError('Failed to load article');
+    }
+}
+
+async function findArticleById(articleId) {
+    const articles = await loadAllArticles();
+    return articles.find(article => article.id === articleId);
+}
+
+// Articles Loading
+function loadAllArticles() {
+    return new Promise((resolve, reject) => {
+        if (state.allArticles.length > 0) {
+            resolve(state.allArticles);
+            return;
+        }
+
+        Papa.parse(CONFIG.csvUrl, {
+            download: true,
+            header: true,
+            complete: (results) => {
+                state.allArticles = results.data
+                    .filter(article => article.title && article.id && article['en article'])
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+                state.filteredArticles = [...state.allArticles];
+                resolve(state.allArticles);
+            },
+            error: reject
+        });
     });
+}
+
+async function loadArticles() {
+    showLoading(true);
+    try {
+        await loadAllArticles();
+        displayArticles();
+    } catch (error) {
+        console.error('Error loading articles:', error);
+        showError('Failed to load articles. Please try again later.');
+    } finally {
+        showLoading(false);
+    }
 }
 
 // Display Functions
@@ -117,56 +145,16 @@ function createArticleCard(article) {
                         <i class="fas fa-calendar-alt me-2"></i>${date}
                     </p>
                     <div class="mt-auto">
-                        <button 
-                            class="btn btn-outline-primary mt-auto w-100" 
-                            onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}')">
+                        <a href="/article/${article.id}" 
+                           class="btn btn-outline-primary mt-auto w-100">
                             Read Article
                             <i class="fas fa-arrow-right ms-2"></i>
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     `;
-}
-
-function showArticleDetails(articleJSON) {
-    try {
-        const article = JSON.parse(decodeURIComponent(articleJSON));
-        const modalElement = document.getElementById('articleModal');
-        const titleElement = modalElement.querySelector('.modal-title');
-        const bodyElement = modalElement.querySelector('.modal-body');
-
-        // Format the date
-        const date = article.date ? new Date(article.date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }) : 'No date';
-
-        // Set the modal title
-        titleElement.textContent = article.title;
-
-        // Create the modal content
-        bodyElement.innerHTML = `
-            <div class="article-content">
-                <div class="article-metadata mb-4">
-                    <div class="text-muted">
-                        <i class="fas fa-calendar-alt me-2"></i>${date}
-                    </div>
-                </div>
-                <div class="article-text">
-                    ${article.content || 'No content available.'}
-                </div>
-            </div>
-        `;
-
-        // Show the modal
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-    } catch (error) {
-        console.error('Error showing article details:', error);
-    }
 }
 
 // Filter and search functions
@@ -236,15 +224,19 @@ function changePage(page) {
 }
 
 function showError(message) {
-    elements.articlesContainer.innerHTML = `
-        <div class="col-12">
-            <div class="alert alert-danger">${message}</div>
-        </div>
-    `;
+    if (elements.errorDisplay && elements.errorMessage) {
+        elements.errorMessage.textContent = message;
+        elements.errorDisplay.style.display = 'block';
+        elements.articlesContainer.style.display = 'none';
+        elements.pagination.style.display = 'none';
+        elements.resultsCount.style.display = 'none';
+    }
 }
 
 function showLoading(show) {
-    elements.loadingIndicator.style.display = show ? 'block' : 'none';
+    if (elements.loadingIndicator) {
+        elements.loadingIndicator.style.display = show ? 'block' : 'none';
+    }
 }
 
 function debounce(func, wait) {
@@ -254,14 +246,3 @@ function debounce(func, wait) {
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
-
-// Additional initialization on page load
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        loadArticles();
-        setupEventListeners();
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showError('Failed to initialize the application. Please refresh the page or contact support.');
-    }
-});
