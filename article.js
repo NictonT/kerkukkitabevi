@@ -17,7 +17,7 @@ const elements = {
     articlesContainer: document.getElementById('articlesContainer'),
     loadingIndicator: document.getElementById('loadingIndicator'),
     resultsCount: document.getElementById('resultsCount'),
-    pagination: document.getElementById('pagination'),
+    pagination: document.getElementById('pagination')
 };
 
 // Initialize application
@@ -39,12 +39,14 @@ function loadArticles() {
         download: true,
         header: true,
         complete: (results) => {
+            console.log('Raw data:', results.data); // Debug log
             state.allArticles = results.data
                 .filter(article => article.title)
                 .sort((a, b) => {
                     // Sort by date (newest first)
                     return new Date(b.date) - new Date(a.date);
                 });
+            console.log('Filtered articles:', state.allArticles); // Debug log
             state.filteredArticles = [...state.allArticles];
             displayArticles();
             showLoading(false);
@@ -57,7 +59,7 @@ function loadArticles() {
     });
 }
 
-// Display Functions==================================================================================================
+// Display Functions
 function displayArticles() {
     if (state.filteredArticles.length === 0) {
         showNoResults();
@@ -96,12 +98,12 @@ function createArticleCard(article) {
                         <i class="fas fa-calendar-alt me-2"></i>${date}
                     </p>
                     <div class="mt-auto">
-                        <button 
-                            class="btn btn-outline-primary mt-auto w-100" 
-                            onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}')">
+                        <a href="#" 
+                           class="btn btn-outline-primary mt-auto w-100" 
+                           onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}'); return false;">
                             Read Article
                             <i class="fas fa-arrow-right ms-2"></i>
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -109,99 +111,17 @@ function createArticleCard(article) {
     `;
 }
 
-async function showArticleDetails(articleJSON) {
+function showArticleDetails(articleJSON) {
     try {
         const article = JSON.parse(decodeURIComponent(articleJSON));
-        
-        // Create and show modal
-        const existingModal = document.getElementById('articleDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        document.body.insertAdjacentHTML('beforeend', createArticleModal(article));
-        const modal = new bootstrap.Modal(document.getElementById('articleDetailsModal'));
-
-        // Show loading state
-        const contentElement = document.getElementById('articleContent');
-        contentElement.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        `;
-
-        modal.show();
-
-        // Fetch the article content
-        try {
-            const response = await fetch(article['en article']);
-            if (!response.ok) throw new Error('Failed to fetch article');
-            const html = await response.text();
-            
-            // Display the content
-            contentElement.innerHTML = html;
-        } catch (error) {
-            console.error('Error fetching article:', error);
-            contentElement.innerHTML = `
-                <div class="alert alert-danger">
-                    Failed to load article content. Please try again later.
-                </div>
-            `;
-        }
-
+        console.log('Opening article:', article); // Debug log
+        window.location.href = article['en article'];
     } catch (error) {
         console.error('Error showing article details:', error);
     }
 }
 
-function createArticleModal(article) {
-    return `
-        <div class="modal fade" id="articleDetailsModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header border-bottom">
-                        <h5 class="modal-title fs-4">${article.title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <div id="articleContent"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// Add to your existing Papa.parse setup
-function loadArticles() {
-    showLoading(true);
-    
-    Papa.parse(CONFIG.csvUrl, {
-        download: true,
-        header: true,
-        complete: (results) => {
-            state.allArticles = results.data
-                .filter(article => {
-                    return article && 
-                           article.title && 
-                           article['en article'];  // Make sure to match your column name exactly
-                })
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            state.filteredArticles = [...state.allArticles];
-            displayArticles();
-            showLoading(false);
-        },
-        error: (error) => {
-            console.error('Error loading articles:', error);
-            showError('Failed to load articles. Please try again later.');
-            showLoading(false);
-        }
-    });
-}
-// Filter and search ===========================================================================================================
+// Filter and search functions
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
@@ -287,11 +207,13 @@ function debounce(func, wait) {
     };
 }
 
-// Keyboard navigation for pagination
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft' && state.currentPage > 1) {
-        changePage(state.currentPage - 1);
-    } else if (e.key === 'ArrowRight' && state.currentPage < Math.ceil(state.filteredArticles.length / CONFIG.articlesPerPage)) {
-        changePage(state.currentPage + 1);
+// Additional initialization on page load
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        loadArticles();
+        setupEventListeners();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showError('Failed to initialize the application. Please refresh the page or contact support.');
     }
 });
