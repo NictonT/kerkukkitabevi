@@ -11,6 +11,23 @@ const state = {
     filteredArticles: [],
 };
 
+// Modal HTML
+const modalHTML = `
+<div class="modal fade" id="articleModal" tabindex="-1" aria-labelledby="articleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="articleModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>`;
+
 // DOM Elements
 const elements = {
     searchInput: document.getElementById('searchInput'),
@@ -22,6 +39,8 @@ const elements = {
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
+    // Add modal to the page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
     loadArticles();
     setupEventListeners();
 });
@@ -98,12 +117,12 @@ function createArticleCard(article) {
                         <i class="fas fa-calendar-alt me-2"></i>${date}
                     </p>
                     <div class="mt-auto">
-                        <a href="#" 
-                           class="btn btn-outline-primary mt-auto w-100" 
-                           onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}'); return false;">
+                        <button 
+                            class="btn btn-outline-primary mt-auto w-100" 
+                            onclick="showArticleDetails('${encodeURIComponent(JSON.stringify(article))}')">
                             Read Article
                             <i class="fas fa-arrow-right ms-2"></i>
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -114,8 +133,37 @@ function createArticleCard(article) {
 function showArticleDetails(articleJSON) {
     try {
         const article = JSON.parse(decodeURIComponent(articleJSON));
-        console.log('Opening article:', article); // Debug log
-        window.location.href = article['en article'];
+        const modalElement = document.getElementById('articleModal');
+        const titleElement = modalElement.querySelector('.modal-title');
+        const bodyElement = modalElement.querySelector('.modal-body');
+
+        // Format the date
+        const date = article.date ? new Date(article.date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }) : 'No date';
+
+        // Set the modal title
+        titleElement.textContent = article.title;
+
+        // Create the modal content
+        bodyElement.innerHTML = `
+            <div class="article-content">
+                <div class="article-metadata mb-4">
+                    <div class="text-muted">
+                        <i class="fas fa-calendar-alt me-2"></i>${date}
+                    </div>
+                </div>
+                <div class="article-text">
+                    ${article.content || 'No content available.'}
+                </div>
+            </div>
+        `;
+
+        // Show the modal
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
     } catch (error) {
         console.error('Error showing article details:', error);
     }
