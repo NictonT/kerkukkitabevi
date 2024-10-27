@@ -2,12 +2,6 @@
 const CONFIG = {
     csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRejUBQCi2XvKxDyrffK2jLZ3BCFBP0D2gCJ17CgChmvaf4GQ1-oACta3DzmOQhdOtwg57ExSVUWMGs/pub?output=csv',
     articlesPerPage: 12,
-    defaultFilters: {
-        date: {
-            start: null,
-            end: null
-        }
-    },
 };
 
 // State management
@@ -52,7 +46,7 @@ function loadArticles() {
         header: true,
         complete: (results) => {
             state.allArticles = results.data
-                .filter(article => article.title && article.date)
+                .filter(article => article.title && article.date && article.article)
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
             state.filteredArticles = [...state.allArticles];
             displayArticles();
@@ -117,13 +111,37 @@ function createArticleCard(article) {
     `;
 }
 
+async function fetchArticleContent(url) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch article content');
+        const html = await response.text();
+        
+        // Extract the content from the Google Docs HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const content = doc.querySelector('#contents');
+        
+        return content ? content.innerHTML : html;
+    } catch (error) {
+        console.error('Error fetching article:', error);
+        throw error;
+    }
+}
+
 async function showArticleDetails(articleJSON) {
     try {
         const article = JSON.parse(decodeURIComponent(articleJSON));
         
         // Show modal with loading state
         elements.modal.title.textContent = article.title;
-        elements.modal.content.innerHTML = '<div class="text-center py-5"><div class="spinner-border" role="status"></div></div>';
+        elements.modal.content.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
         
         const modal = new bootstrap.Modal(elements.modal.container);
         modal.show();
@@ -134,17 +152,40 @@ async function showArticleDetails(articleJSON) {
             return;
         }
 
-        // Load content
-        const response = await fetch(article.article);
-        if (!response.ok) throw new Error('Failed to fetch article content');
+        // Fetch and process the content
+        const content = await fetchArticleContent(article.article);
         
-        const content = await response.text();
+        // Style the content
+        const styledContent = `
+            <div class="article-content">
+                <style>
+                    .article-content {
+                        font-family: 'Open Sans', sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }
+                    .article-content img {
+                        max-width: 100%;
+                        height: auto;
+                        margin: 1rem 0;
+                    }
+                    .article-content h1, .article-content h2, .article-content h3 {
+                        margin-top: 1.5rem;
+                        margin-bottom: 1rem;
+                    }
+                    .article-content p {
+                        margin-bottom: 1rem;
+                    }
+                </style>
+                ${content}
+            </div>
+        `;
         
         // Cache the content
-        state.loadedArticleContents.set(article.article, content);
+        state.loadedArticleContents.set(article.article, styledContent);
         
         // Update modal content
-        elements.modal.content.innerHTML = content;
+        elements.modal.content.innerHTML = styledContent;
         
     } catch (error) {
         console.error('Error showing article details:', error);
@@ -209,6 +250,7 @@ function updatePagination() {
     });
 }
 
+// Utility Functions
 function showNoResults() {
     elements.articlesContainer.innerHTML = `
         <div class="col-12">
@@ -227,7 +269,6 @@ function changePage(page) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Utility Functions
 function showError(message) {
     elements.articlesContainer.innerHTML = `
         <div class="col-12">
