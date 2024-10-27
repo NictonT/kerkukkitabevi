@@ -148,8 +148,7 @@ function createBookCard(book) {
                         ` : ''}
                         <a href="#" 
                            class="btn btn-outline-primary mt-auto w-100" 
-                           data-book="${btoa(JSON.stringify(book))}"
-                           onclick="showBookDetails(this.getAttribute('data-book')); return false;">
+                           onclick="showBookDetails('${encodeURIComponent(JSON.stringify(book))}'); return false;">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
                         </a>
@@ -158,6 +157,23 @@ function createBookCard(book) {
             </div>
         </div>
     `;
+}
+
+function showBookDetails(bookJSON) {
+    try {
+        const book = JSON.parse(decodeURIComponent(bookJSON));
+        
+        const existingModal = document.getElementById('bookDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error showing book details:', error);
+    }
 }
 
 function createBookDetailsModal(book) {
@@ -277,23 +293,6 @@ function renderStatusAndPrice(status, price) {
             ` : ''}
         </div>
     `;
-}
-
-function showBookDetails(bookData) {
-    try {
-        const book = JSON.parse(atob(bookData));
-        
-        const existingModal = document.getElementById('bookDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error showing book details:', error);
-    }
 }
 // filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 function applyFilters() {
