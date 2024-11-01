@@ -1,8 +1,5 @@
 // Configuration
 const CONFIG = {
-    // Changable filelink on google sheets.
-    // File must be scv type.
-    // Sometimes it authomatically updates i dont fully understand it...
     csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKVLJoqOcDonQqPm7e25B179_x0vp8hnDHivL73cGeopSnrno5fE8huqdntrGqEAeHzG88xmnquR5N/pub?output=csv',
     booksPerPage: 24,
     defaultFilters: {
@@ -15,20 +12,22 @@ const CONFIG = {
     }
 };
 
-// State management
 const state = {
     currentPage: 1,
     allBooks: [],
     filteredBooks: [],
+    currentView: 'list',
+    currentBookId: null
 };
 
-// DOM Elements
 const elements = {
     searchInput: document.getElementById('searchInput'),
     booksContainer: document.getElementById('booksContainer'),
+    bookDetailContainer: document.getElementById('bookDetailContainer'),
     loadingIndicator: document.getElementById('loadingIndicator'),
     resultsCount: document.getElementById('resultsCount'),
     pagination: document.getElementById('pagination'),
+    filtersSection: document.getElementById('filtersSection'),
     filters: {
         ageMin: document.getElementById('ageRangeMin'),
         ageMax: document.getElementById('ageRangeMax'),
@@ -38,20 +37,44 @@ const elements = {
     }
 };
 
-// Initialize application
+function getBookIdFromUrl() {
+    const path = window.location.pathname;
+    const match = path.match(/\/books\/(\d+)/);
+    return match ? match[1] : null;
+}
+
+function updateUrl(bookId = null) {
+    const newUrl = bookId ? `/books/${bookId}` : '/books';
+    window.history.pushState({ bookId }, '', newUrl);
+}
+
+window.onpopstate = function(event) {
+    if (event.state && event.state.bookId) {
+        showBookDetailView(event.state.bookId);
+    } else {
+        showListView();
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    const bookId = getBookIdFromUrl();
+    if (bookId) {
+        state.currentView = 'detail';
+        state.currentBookId = bookId;
+    }
     loadBooks();
     setupEventListeners();
+    initializePriceRanges();
+    initializeAgeRanges();
+    validateElements();
 });
 
-// Event Listeners
 function setupEventListeners() {
     elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
     elements.filters.applyButton.addEventListener('click', applyFilters);
     elements.booksContainer.addEventListener('click', handleBookInteractions);
 }
 
-// Books Loading
 function loadBooks() {
     showLoading(true);
     
@@ -61,17 +84,21 @@ function loadBooks() {
         complete: (results) => {
             state.allBooks = results.data
                 .filter(book => book['book name'])
+                .map(book => ({ ...book, id: book['ISBN 10'] || book['isbn10'] }))
                 .sort((a, b) => {
-                    // Sort by availability first (available books come first)
                     const statusA = (a.status || '').toLowerCase() === 'available';
                     const statusB = (b.status || '').toLowerCase() === 'available';
                     if (statusA !== statusB) return statusB - statusA;
-                    
-                    // Then sort by title
                     return (a['book name'] || '').localeCompare(b['book name'] || '');
                 });
             state.filteredBooks = [...state.allBooks];
-            displayBooks();
+            
+            if (state.currentView === 'detail' && state.currentBookId) {
+                showBookDetailView(state.currentBookId);
+            } else {
+                displayBooks();
+            }
+            
             showLoading(false);
         },
         error: (error) => {
@@ -82,7 +109,38 @@ function loadBooks() {
     });
 }
 
-// Display Functions
+function showListView() {
+    state.currentView = 'list';
+    state.currentBookId = null;
+    elements.filtersSection.style.display = 'flex';
+    elements.pagination.style.display = 'block';
+    elements.bookDetailContainer.style.display = 'none';
+    elements.booksContainer.style.display = 'block';
+    elements.resultsCount.style.display = 'block';
+    updateUrl();
+    displayBooks();
+}
+
+function showBookDetailView(bookId) {
+    const book = state.allBooks.find(b => b.id === bookId);
+    if (!book) {
+        window.location.href = '/404.html';
+        return;
+    }
+
+    state.currentView = 'detail';
+    state.currentBookId = bookId;
+    
+    elements.filtersSection.style.display = 'none';
+    elements.pagination.style.display = 'none';
+    elements.booksContainer.style.display = 'none';
+    elements.resultsCount.style.display = 'none';
+    
+    const bookJSON = encodeURIComponent(JSON.stringify(book));
+    showBookDetails(bookJSON);
+    updateUrl(bookId);
+}
+
 function displayBooks() {
     if (state.filteredBooks.length === 0) {
         showNoResults();
@@ -100,7 +158,7 @@ function displayBooks() {
         const status = (book.status || '').toLowerCase() === 'available';
         
         if (status !== currentStatus) {
-            if (html) html += '</div>'; // Close previous section
+            if (html) html += '</div>';
             html += `
                 <div class="col-12">
                     <h4 class="mt-4 mb-3">${status ? 'Available Books' : 'Unavailable Books'}</h4>
@@ -113,23 +171,19 @@ function displayBooks() {
         html += createBookCard(book);
     });
 
-    if (html) html += '</div>'; // Close last section
+    if (html) html += '</div>';
     
     elements.booksContainer.innerHTML = html;
     updateResultsCount();
     updatePagination();
 }
-//verrrrrrrrry important books section
+
 function createBookCard(book) {
     const title = book['book name'] || 'Unknown Title';
     const author = book['author'] || 'Unknown Author';
     const price = book['price'] ? `${book['price']} IQD` : null;
     const photo = book['photo'] || book['Photo'] || 'photos/logo/placeholder.jpg';
     const status = (book.status || '').toLowerCase();
-    
-    // Properly escape the book data for JSON encoding
-    const escapedBookData = encodeURIComponent(JSON.stringify(book))
-        .replace(/'/g, '%27'); // Additional encoding for single quotes
     
     return `
         <div class="col-md-4 mb-4">
@@ -150,9 +204,9 @@ function createBookCard(book) {
                                 <span class="badge bg-secondary px-3 py-2">${price}</span>
                             </p>
                         ` : ''}
-                        <a href="#" 
+                        <a href="/books/${book.id}" 
                            class="btn btn-outline-primary mt-auto w-100" 
-                           onclick="showBookDetails('${escapedBookData}'); return false;">
+                           onclick="event.preventDefault(); showBookDetailView('${book.id}');">
                             View Details
                             <i class="fas fa-info-circle ms-2"></i>
                         </a>
@@ -161,6 +215,32 @@ function createBookCard(book) {
             </div>
         </div>
     `;
+}
+[continuing the books.js file...]
+
+function showBookDetails(bookJSON) {
+    try {
+        const book = JSON.parse(decodeURIComponent(bookJSON));
+        
+        const existingModal = document.getElementById('bookDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
+        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+        
+        modal._element.addEventListener('hidden.bs.modal', () => {
+            if (state.currentView === 'detail') {
+                showListView();
+            }
+        });
+        
+        modal.show();
+    } catch (error) {
+        console.error('Error showing book details:', error);
+        window.location.href = '/404.html';
+    }
 }
 
 function createBookDetailsModal(book) {
@@ -195,7 +275,6 @@ function createBookDetailsModal(book) {
         { label: 'Publishing Date', value: details.publishingDate }
     ];
 
-    // Properly escape the title for the email function
     const escapedTitle = encodeURIComponent(book['book name'] || 'Unknown Title')
         .replace(/'/g, '%27');
 
@@ -256,7 +335,6 @@ function createBookDetailsModal(book) {
     `;
 }
 
-// Helper functions remain the same
 function renderDetailsColumn(details) {
     return details
         .filter(detail => detail.value)
@@ -286,12 +364,12 @@ function renderStatusAndPrice(status, price) {
         </div>
     `;
 }
-// filter and search icon-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 function applyFilters() {
     const searchQuery = elements.searchInput.value.toLowerCase().trim();
 
     if (!searchQuery) {
-        state.filteredBooks = [...state.allBooks]; // allBooks is already sorted by availability
+        state.filteredBooks = [...state.allBooks];
     } else {
         state.filteredBooks = state.allBooks.filter(book => {
             return book['book name']?.toLowerCase().includes(searchQuery) ||
@@ -305,29 +383,11 @@ function applyFilters() {
     displayBooks();
 }
 
-function showBookDetails(bookJSON) {
-    try {
-        const book = JSON.parse(decodeURIComponent(bookJSON));
-        
-        const existingModal = document.getElementById('bookDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        document.body.insertAdjacentHTML('beforeend', createBookDetailsModal(book));
-        const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error showing book details:', error);
-    }
-}
-
 function sendPurchaseEmail(bookTitle) {
     const subject = encodeURIComponent(`Interest in purchasing: ${decodeURIComponent(bookTitle)}`);
     const body = encodeURIComponent(`I want to buy book: ${decodeURIComponent(bookTitle)}`);
     window.location.href = `mailto:contact@kerkukkitabevi.net?subject=${subject}&body=${body}`;
 }
-//-------------------------------------------------------------------------------------------------------------------------------------------------------
 
 function updateResultsCount() {
     const searchQuery = elements.searchInput.value.trim();
@@ -339,9 +399,10 @@ function updateResultsCount() {
             </div>
         `;
     } else {
-        elements.resultsCount.innerHTML = ''; // Clear the results count when search is empty
+        elements.resultsCount.innerHTML = '';
     }
 }
+
 function updatePagination() {
     const totalPages = Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage);
     
@@ -390,7 +451,6 @@ function showLoading(show) {
     elements.loadingIndicator.style.display = show ? 'block' : 'none';
 }
 
-// Event handling
 function handleBookInteractions(event) {
     if (event.target.classList.contains('show-more-btn')) {
         event.preventDefault();
@@ -411,7 +471,6 @@ function handleBookInteractions(event) {
     }
 }
 
-// Utility functions
 function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -420,7 +479,6 @@ function debounce(func, wait) {
     };
 }
 
-// Validation
 function validateElements() {
     const missingElements = [];
     for (const [key, element] of Object.entries(elements)) {
@@ -440,7 +498,6 @@ function validateElements() {
     }
 }
 
-// Initialize Price Range Inputs
 function initializePriceRanges() {
     if (elements.filters.priceMin && elements.filters.priceMax) {
         elements.filters.priceMin.value = CONFIG.defaultFilters.price.min;
@@ -448,7 +505,6 @@ function initializePriceRanges() {
     }
 }
 
-// Initialize Age Range Inputs
 function initializeAgeRanges() {
     if (elements.filters.ageMin && elements.filters.ageMax) {
         elements.filters.ageMin.value = CONFIG.defaultFilters.age.min;
@@ -456,7 +512,6 @@ function initializeAgeRanges() {
     }
 }
 
-// Reset Filters
 function resetFilters() {
     elements.searchInput.value = '';
     initializePriceRanges();
@@ -466,7 +521,6 @@ function resetFilters() {
     displayBooks();
 }
 
-// Enhanced Filter Functions
 function applyPriceFilter(books) {
     const minPrice = Number(elements.filters.priceMin.value) || CONFIG.defaultFilters.price.min;
     const maxPrice = Number(elements.filters.priceMax.value) || CONFIG.defaultFilters.price.max;
@@ -487,31 +541,17 @@ function applyAgeFilter(books) {
     });
 }
 
-// Image error handling
 function handleImageError(img) {
     img.onerror = null;
     img.src = CONFIG.paths.placeholderImage;
 }
 
-// Optional: Add keyboard navigation for pagination
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft' && state.currentPage > 1) {
-        changePage(state.currentPage - 1);
-    } else if (e.key === 'ArrowRight' && state.currentPage < Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage)) {
-        changePage(state.currentPage + 1);
-    }
-});
-
-// Additional initialization on page load
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        validateElements();
-        loadBooks();
-        setupEventListeners();
-        initializePriceRanges();
-        initializeAgeRanges();
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showError('Failed to initialize the application. Please refresh the page or contact support.');
+    if (state.currentView === 'list') {
+        if (e.key === 'ArrowLeft' && state.currentPage > 1) {
+            changePage(state.currentPage - 1);
+        } else if (e.key === 'ArrowRight' && state.currentPage < Math.ceil(state.filteredBooks.length / CONFIG.booksPerPage)) {
+            changePage(state.currentPage + 1);
+        }
     }
 });
