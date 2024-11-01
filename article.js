@@ -1,14 +1,14 @@
 // Configuration
 const CONFIG = {
     csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRejUBQCi2XvKxDyrffK2jLZ3BCFBP0D2gCJ17CgChmvaf4GQ1-oACta3DzmOQhdOtwg57ExSVUWMGs/pub?output=csv',
-    articlesPerPage: 24,
+    articlesPerPage: 24
 };
 
 // State management
 const state = {
     currentPage: 1,
     allArticles: [],
-    filteredArticles: [],
+    filteredArticles: []
 };
 
 // DOM Elements
@@ -22,13 +22,35 @@ const elements = {
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
-    loadArticles();
-    setupEventListeners();
+    try {
+        validateElements();
+        loadArticles();
+        setupEventListeners();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showError('Failed to initialize the application. Please refresh the page or contact support.');
+    }
 });
 
 // Event Listeners
 function setupEventListeners() {
     elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
+    elements.articlesContainer.addEventListener('click', handleArticleInteractions);
+    elements.pagination.addEventListener('click', handlePaginationClick);
+}
+
+// Validation
+function validateElements() {
+    const missingElements = [];
+    for (const [key, element] of Object.entries(elements)) {
+        if (!element) {
+            missingElements.push(key);
+        }
+    }
+
+    if (missingElements.length > 0) {
+        throw new Error(`Required DOM elements missing: ${missingElements.join(', ')}`);
+    }
 }
 
 // Articles Loading
@@ -40,7 +62,7 @@ function loadArticles() {
         header: true,
         complete: (results) => {
             state.allArticles = results.data
-                .filter(article => article.title && article['en article'])
+                .filter(article => article.title)  // Filter out empty entries
                 .sort((a, b) => {
                     // Sort by date, most recent first
                     return new Date(b.date || 0) - new Date(a.date || 0);
@@ -68,13 +90,11 @@ function displayArticles() {
     const end = Math.min(start + CONFIG.articlesPerPage, state.filteredArticles.length);
     const articlesToShow = state.filteredArticles.slice(start, end);
 
-    let html = `<div class="row g-4">`;
-    
+    let html = '<div class="row g-4">';
     articlesToShow.forEach(article => {
         html += createArticleCard(article);
     });
-    
-    html += `</div>`;
+    html += '</div>';
     
     elements.articlesContainer.innerHTML = html;
     updateResultsCount();
@@ -83,19 +103,19 @@ function displayArticles() {
 
 function createArticleCard(article) {
     const title = article.title || 'Unknown Title';
+    const description = article.description || '';
     const date = article.date ? new Date(article.date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     }) : 'No date';
-    const description = article.description || '';
-    const articleUrl = article['en article'] || '#';
+    const articleUrl = article['en article'] || article['ku article'] || '#';
 
     return `
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm hover:shadow-lg transition-all duration-300">
                 <div class="card-body d-flex flex-column p-4">
-                    <h5 class="card-title fs-4 mb-2">${title}</h5>
+                    <h5 class="card-title fs-4 mb-2 text-truncate">${title}</h5>
                     <p class="card-text text-muted mb-3">
                         <i class="fas fa-calendar-alt me-2"></i>${date}
                     </p>
@@ -104,7 +124,8 @@ function createArticleCard(article) {
                     ` : ''}
                     <div class="mt-auto">
                         <a href="${articleUrl}" 
-                           target="_blank"
+                           target="_blank" 
+                           rel="noopener noreferrer" 
                            class="btn btn-outline-primary mt-auto w-100">
                             Read Article
                             <i class="fas fa-arrow-right ms-2"></i>
@@ -156,13 +177,22 @@ function updatePagination() {
                 <a class="page-link" href="#" data-page="${page}">${page}</a>
             </li>
         `).join('');
+}
 
-    elements.pagination.querySelectorAll('.page-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            changePage(parseInt(e.target.dataset.page));
-        });
-    });
+function handlePaginationClick(event) {
+    if (event.target.classList.contains('page-link')) {
+        event.preventDefault();
+        const page = parseInt(event.target.dataset.page);
+        if (page && page !== state.currentPage) {
+            changePage(page);
+        }
+    }
+}
+
+function changePage(page) {
+    state.currentPage = page;
+    displayArticles();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function showNoResults() {
@@ -177,12 +207,6 @@ function showNoResults() {
     updatePagination();
 }
 
-function changePage(page) {
-    state.currentPage = page;
-    displayArticles();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
 function showError(message) {
     elements.articlesContainer.innerHTML = `
         <div class="col-12">
@@ -192,7 +216,21 @@ function showError(message) {
 }
 
 function showLoading(show) {
-    elements.loadingIndicator.style.display = show ? 'block' : 'none';
+    if (elements.loadingIndicator) {
+        elements.loadingIndicator.style.display = show ? 'block' : 'none';
+        if (elements.articlesContainer) {
+            elements.articlesContainer.style.opacity = show ? '0.5' : '1';
+        }
+    }
+}
+
+// Event handling
+function handleArticleInteractions(event) {
+    // For future interaction handlers
+    if (event.target.classList.contains('article-action')) {
+        event.preventDefault();
+        // Handle any future article-specific actions
+    }
 }
 
 // Utility Functions
@@ -203,3 +241,12 @@ function debounce(func, wait) {
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
+
+// Optional: Add keyboard navigation for pagination
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' && state.currentPage > 1) {
+        changePage(state.currentPage - 1);
+    } else if (e.key === 'ArrowRight' && state.currentPage < Math.ceil(state.filteredArticles.length / CONFIG.articlesPerPage)) {
+        changePage(state.currentPage + 1);
+    }
+});
