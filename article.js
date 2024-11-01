@@ -17,7 +17,10 @@ const elements = {
     articlesContainer: document.getElementById('articlesContainer'),
     loadingIndicator: document.getElementById('loadingIndicator'),
     resultsCount: document.getElementById('resultsCount'),
-    pagination: document.getElementById('pagination')
+    pagination: document.getElementById('pagination'),
+    mainContent: document.getElementById('mainContent'),
+    errorDisplay: document.getElementById('errorDisplay'),
+    errorMessage: document.getElementById('errorMessage')
 };
 
 // Initialize application
@@ -35,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // Event Listeners
 function setupEventListeners() {
     elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
-    elements.articlesContainer.addEventListener('click', handleArticleInteractions);
     elements.pagination.addEventListener('click', handlePaginationClick);
 }
 
@@ -62,7 +64,7 @@ function loadArticles() {
         header: true,
         complete: (results) => {
             state.allArticles = results.data
-                .filter(article => article.title)  // Filter out empty entries
+                .filter(article => article.title)
                 .sort((a, b) => {
                     // Sort by date, most recent first
                     return new Date(b.date || 0) - new Date(a.date || 0);
@@ -81,6 +83,9 @@ function loadArticles() {
 
 // Display Functions
 function displayArticles() {
+    elements.errorDisplay.style.display = 'none';
+    elements.mainContent.style.display = 'block';
+
     if (state.filteredArticles.length === 0) {
         showNoResults();
         return;
@@ -90,13 +95,7 @@ function displayArticles() {
     const end = Math.min(start + CONFIG.articlesPerPage, state.filteredArticles.length);
     const articlesToShow = state.filteredArticles.slice(start, end);
 
-    let html = '<div class="row g-4">';
-    articlesToShow.forEach(article => {
-        html += createArticleCard(article);
-    });
-    html += '</div>';
-    
-    elements.articlesContainer.innerHTML = html;
+    elements.articlesContainer.innerHTML = articlesToShow.map(createArticleCard).join('');
     updateResultsCount();
     updatePagination();
 }
@@ -160,7 +159,8 @@ function updateResultsCount() {
     if (searchQuery) {
         elements.resultsCount.innerHTML = `
             <div class="alert alert-info">
-                Found ${state.filteredArticles.length} article${state.filteredArticles.length !== 1 ? 's' : ''}
+                <i class="fas fa-search me-2"></i>Found ${state.filteredArticles.length} 
+                article${state.filteredArticles.length !== 1 ? 's' : ''}
             </div>
         `;
     } else {
@@ -171,6 +171,11 @@ function updateResultsCount() {
 function updatePagination() {
     const totalPages = Math.ceil(state.filteredArticles.length / CONFIG.articlesPerPage);
     
+    if (totalPages <= 1) {
+        elements.pagination.innerHTML = '';
+        return;
+    }
+
     elements.pagination.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
         .map(page => `
             <li class="page-item ${page === state.currentPage ? 'active' : ''}">
@@ -199,37 +204,29 @@ function showNoResults() {
     elements.articlesContainer.innerHTML = `
         <div class="col-12">
             <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
                 No articles found matching your criteria. Try adjusting your search.
             </div>
         </div>
     `;
+    elements.pagination.innerHTML = '';
     updateResultsCount();
-    updatePagination();
 }
 
 function showError(message) {
-    elements.articlesContainer.innerHTML = `
-        <div class="col-12">
-            <div class="alert alert-danger">${message}</div>
-        </div>
-    `;
+    if (elements.errorDisplay && elements.errorMessage) {
+        elements.errorMessage.textContent = message;
+        elements.errorDisplay.style.display = 'block';
+        elements.mainContent.style.display = 'none';
+    }
 }
 
 function showLoading(show) {
     if (elements.loadingIndicator) {
         elements.loadingIndicator.style.display = show ? 'block' : 'none';
         if (elements.articlesContainer) {
-            elements.articlesContainer.style.opacity = show ? '0.5' : '1';
+            elements.articlesContainer.style.display = show ? 'none' : 'block';
         }
-    }
-}
-
-// Event handling
-function handleArticleInteractions(event) {
-    // For future interaction handlers
-    if (event.target.classList.contains('article-action')) {
-        event.preventDefault();
-        // Handle any future article-specific actions
     }
 }
 
